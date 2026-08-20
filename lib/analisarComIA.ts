@@ -67,7 +67,8 @@ export async function analisarProcessoComIA(
 }
 
 export async function analisarPdfComIA(
-  buffer: Buffer
+  buffer: Buffer,
+  textoOcr = ""
 ): Promise<AnaliseProcesso> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -89,7 +90,12 @@ export async function analisarPdfComIA(
           },
           {
             type: "text",
-            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}\n\nLeia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.`,
+            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}
+
+Leia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.
+
+Transcrição auxiliar produzida por OCR. Use-a para conferir números e nomes, mas sempre valide contra a imagem do PDF:
+${textoOcr.slice(0, 50000)}`,
           },
         ],
       },

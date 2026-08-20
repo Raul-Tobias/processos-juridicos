@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { extrairTextoDoPdf } from "@/lib/extrairTexto";
-import { analisarPdfComIA, analisarProcessoComIA } from "@/lib/analisarComIA";
+import { analisarPdfComIA } from "@/lib/analisarComIA";
 import { inserirProcesso } from "@/lib/db";
 import { COOKIE_SESSAO, usuarioDaSessao } from "@/lib/auth";
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     console.info("Texto extraído do documento:", texto.trim().length, "caracteres");
     const analise =
       texto.trim().length >= 30
-        ? await analisarProcessoComIA(texto)
+        ? await analisarPdfComIA(buffer, texto)
         : await analisarPdfComIA(buffer);
 
     const camposIdentificados = [
