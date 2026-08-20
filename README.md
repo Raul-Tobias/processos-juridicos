@@ -29,17 +29,21 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
 ## Produção
 
-O projeto usa PostgreSQL para manter processos, usuários e sessões persistentes em ambientes serverless como a Vercel.
+O projeto usa PostgreSQL no Neon para manter processos, usuários e sessões persistentes, e pode ser hospedado como Web Service no Render.
 
-Configure `DATABASE_URL` e `ANTHROPIC_API_KEY` na Vercel e no ambiente local. Para preservar os dados do SQLite local, crie o banco PostgreSQL e execute:
+No Render, crie um Web Service apontando para o repositório GitHub e use:
+
+```text
+Build Command: npm ci && npm run build
+Start Command: npm run start
+Health Check Path: /
+```
+
+Configure `DATABASE_URL` e `ANTHROPIC_API_KEY` no painel do Render. O arquivo `render.yaml` já contém essa configuração como Blueprint.
+
+Para preservar os dados do SQLite local, configure temporariamente a URL do Neon e execute:
 
 ```bash
 npm run migrar:sqlite
