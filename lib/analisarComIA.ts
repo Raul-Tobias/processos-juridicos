@@ -89,7 +89,7 @@ export async function analisarPdfComIA(
           },
           {
             type: "text",
-            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}\n\nLeia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis e retorne somente o JSON solicitado.`,
+            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}\n\nLeia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.`,
           },
         ],
       },

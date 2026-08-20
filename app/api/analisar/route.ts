@@ -55,10 +55,30 @@ export async function POST(req: NextRequest) {
     }
 
     const texto = await extrairTextoDoPdf(buffer);
+    console.info("Texto extraído do documento:", texto.trim().length, "caracteres");
     const analise =
       texto.trim().length >= 30
         ? await analisarProcessoComIA(texto)
         : await analisarPdfComIA(buffer);
+
+    const camposIdentificados = [
+      analise.numeroProcesso,
+      analise.partes,
+      analise.varaComarca,
+      analise.tipoAcao,
+      analise.valorCausa,
+      analise.prazoVencimento,
+      analise.andamentoAtual,
+      analise.resumo,
+    ].filter(Boolean).length;
+    console.info("Campos identificados pela IA:", camposIdentificados);
+
+    if (camposIdentificados === 0) {
+      return NextResponse.json(
+        { erro: "Não foi possível identificar informações neste documento. Tente um PDF mais nítido." },
+        { status: 422 }
+      );
+    }
 
     const id = randomUUID();
     const criadoEm = new Date().toISOString();
