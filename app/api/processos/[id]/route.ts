@@ -13,11 +13,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value)) {
+  if (!await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value)) {
     return NextResponse.json({ erro: "Faça login para acessar os processos." }, { status: 401 });
   }
   const { id } = await params;
-  const processo = buscarProcessoPorId(id);
+  const processo = await buscarProcessoPorId(id);
 
   if (!processo) {
     return NextResponse.json(
@@ -33,11 +33,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const usuario = usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
+  const usuario = await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
   if (!usuario) return NextResponse.json({ erro: "Faça login para editar processos." }, { status: 401 });
   if (!usuario.permissoes.editar) return NextResponse.json({ erro: "Seu perfil não pode editar processos." }, { status: 403 });
   const { id } = await params;
-  const processo = buscarProcessoPorId(id);
+  const processo = await buscarProcessoPorId(id);
 
   if (!processo) {
     return NextResponse.json(
@@ -57,7 +57,7 @@ export async function PATCH(
   }
 
   if (status !== undefined) {
-    atualizarStatusProcesso(id, status);
+    await atualizarStatusProcesso(id, status);
   }
 
   const campos = [
@@ -76,7 +76,7 @@ export async function PATCH(
       .filter((campo) => corpo?.[campo] === null || typeof corpo?.[campo] === "string")
       .map((campo) => [campo, corpo[campo]])
   );
-  atualizarDadosProcesso(id, dados);
+  await atualizarDadosProcesso(id, dados);
   return NextResponse.json({ id, ...dados, ...(status ? { status } : {}) });
 }
 
@@ -84,11 +84,11 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const usuario = usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
+  const usuario = await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
   if (!usuario) return NextResponse.json({ erro: "Faça login para excluir processos." }, { status: 401 });
   if (!usuario.permissoes.excluir) return NextResponse.json({ erro: "Seu perfil não pode excluir processos." }, { status: 403 });
   const { id } = await params;
-  const processo = buscarProcessoPorId(id);
+  const processo = await buscarProcessoPorId(id);
 
   if (!processo) {
     return NextResponse.json(
@@ -97,6 +97,6 @@ export async function DELETE(
     );
   }
 
-  deletarProcesso(id);
+  await deletarProcesso(id);
   return NextResponse.json({ id, deletado: true });
 }

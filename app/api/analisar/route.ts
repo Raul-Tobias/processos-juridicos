@@ -9,7 +9,7 @@ const TAMANHO_MAXIMO_ARQUIVO = 25 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
-    const usuario = usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
+    const usuario = await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
     if (!usuario) {
       return NextResponse.json({ erro: "Faça login para analisar um processo." }, { status: 401 });
     }
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     const id = randomUUID();
     const criadoEm = new Date().toISOString();
 
-    inserirProcesso({
+    await inserirProcesso({
       id,
       numeroProcesso: analise.numeroProcesso,
       partes: analise.partes,

@@ -1,54 +1,9 @@
-import { DatabaseSync } from "node:sqlite";
-import path from "path";
-import fs from "fs";
+import postgres from "postgres";
 
-const dataDir = path.join(process.cwd(), "data");
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = path.join(dataDir, "processos.db");
-const db = new DatabaseSync(dbPath);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS processos (
-    id TEXT PRIMARY KEY,
-    numeroProcesso TEXT,
-    partes TEXT,
-    varaComarca TEXT,
-    tipoAcao TEXT,
-    valorCausa TEXT,
-    status TEXT NOT NULL DEFAULT 'em_andamento',
-    prazoVencimento TEXT,
-    andamentoAtual TEXT,
-    resumo TEXT,
-    observacoes TEXT,
-    nomeArquivo TEXT,
-    criadoEm TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS usuarios (
-    id TEXT PRIMARY KEY,
-    nome TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    senhaHash TEXT NOT NULL,
-    perfil TEXT NOT NULL DEFAULT 'consulta',
-    permissoes TEXT NOT NULL,
-    ativo INTEGER NOT NULL DEFAULT 1,
-    criadoEm TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS sessoes (
-    token TEXT PRIMARY KEY,
-    usuarioId TEXT NOT NULL,
-    expiraEm TEXT NOT NULL,
-    FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE CASCADE
-  );
-`);
-
-try {
-  db.exec("ALTER TABLE processos ADD COLUMN observacoes TEXT");
-} catch {
-  // Column already exists in databases created after this field was added.
-}
+export const sql = postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/autos", {
+  prepare: false,
+  max: 5,
+});
 
 export interface Processo {
   id: string;
@@ -66,75 +21,127 @@ export interface Processo {
   criadoEm: string;
 }
 
-export function inserirProcesso(processo: Processo) {
-  const stmt = db.prepare(`
-    INSERT INTO processos (
-      id, numeroProcesso, partes, varaComarca, tipoAcao, valorCausa,
-      status, prazoVencimento, andamentoAtual, resumo, nomeArquivo, criadoEm
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+export async function inicializarBanco() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS processos (
+      id TEXT PRIMARY KEY,
+      numero_processo TEXT,
+      partes TEXT,
+      vara_comarca TEXT,
+      tipo_acao TEXT,
+      valor_causa TEXT,
+      status TEXT NOT NULL DEFAULT 'em_andamento',
+      prazo_vencimento TEXT,
+      andamento_atual TEXT,
+      resumo TEXT,
+      observacoes TEXT,
+      nome_arquivo TEXT,
+      criado_em TIMESTAMPTZ NOT NULL
     )
-  `);
-  stmt.run(
-    processo.id,
-    processo.numeroProcesso,
-    processo.partes,
-    processo.varaComarca,
-    processo.tipoAcao,
-    processo.valorCausa,
-    processo.status,
-    processo.prazoVencimento,
-    processo.andamentoAtual,
-    processo.resumo,
-    processo.nomeArquivo,
-    processo.criadoEm
-  );
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id TEXT PRIMARY KEY,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      senha_hash TEXT NOT NULL,
+      perfil TEXT NOT NULL DEFAULT 'consulta',
+      permissoes JSONB NOT NULL,
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      criado_em TIMESTAMPTZ NOT NULL
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessoes (
+      token TEXT PRIMARY KEY,
+      usuario_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      expira_em TIMESTAMPTZ NOT NULL
+    )
+  `;
 }
 
-export function listarProcessos(): Processo[] {
-  return db
-    .prepare("SELECT * FROM processos ORDER BY criadoEm DESC")
-    .all() as unknown as Processo[];
+export const bancoPronto = process.env.DATABASE_URL
+  ? inicializarBanco()
+  : Promise.resolve();
+
+export async function inserirProcesso(processo: Processo) {
+  await bancoPronto;
+  await sql`
+    INSERT INTO processos ${sql({
+      id: processo.id,
+      numero_processo: processo.numeroProcesso,
+      partes: processo.partes,
+      vara_comarca: processo.varaComarca,
+      tipo_acao: processo.tipoAcao,
+      valor_causa: processo.valorCausa,
+      status: processo.status,
+      prazo_vencimento: processo.prazoVencimento,
+      andamento_atual: processo.andamentoAtual,
+      resumo: processo.resumo,
+      observacoes: processo.observacoes ?? null,
+      nome_arquivo: processo.nomeArquivo,
+      criado_em: processo.criadoEm,
+    })}
+  `;
 }
 
-export function buscarProcessoPorId(id: string): Processo | undefined {
-  const resultado = db
-    .prepare("SELECT * FROM processos WHERE id = ?")
-    .get(id);
-  return resultado as unknown as Processo | undefined;
+function mapearProcesso(linha: Record<string, unknown>): Processo {
+  return {
+    id: String(linha.id),
+    numeroProcesso: linha.numero_processo as string | null,
+    partes: linha.partes as string | null,
+    varaComarca: linha.vara_comarca as string | null,
+    tipoAcao: linha.tipo_acao as string | null,
+    valorCausa: linha.valor_causa as string | null,
+    status: String(linha.status),
+    prazoVencimento: linha.prazo_vencimento as string | null,
+    andamentoAtual: linha.andamento_atual as string | null,
+    resumo: linha.resumo as string | null,
+    observacoes: linha.observacoes as string | null,
+    nomeArquivo: linha.nome_arquivo as string | null,
+    criadoEm: new Date(String(linha.criado_em)).toISOString(),
+  };
 }
 
-export function atualizarStatusProcesso(id: string, status: string) {
-  db.prepare("UPDATE processos SET status = ? WHERE id = ?").run(status, id);
+export async function listarProcessos() {
+  await bancoPronto;
+  const linhas = await sql`SELECT * FROM processos ORDER BY criado_em DESC`;
+  return linhas.map((linha) => mapearProcesso(linha));
 }
 
-export function atualizarDadosProcesso(
-  id: string,
-  dados: Partial<Pick<Processo, keyof Processo>>
-) {
-  const campos = [
-    "numeroProcesso",
-    "partes",
-    "varaComarca",
-    "tipoAcao",
-    "valorCausa",
-    "prazoVencimento",
-    "andamentoAtual",
-    "resumo",
-    "observacoes",
-  ] as const;
-  const presentes = campos.filter((campo) => campo in dados);
-  if (presentes.length === 0) return;
-
-  const valores = presentes.map((campo) => dados[campo] ?? null);
-  db.prepare(
-    `UPDATE processos SET ${presentes.map((campo) => `${campo} = ?`).join(", ")} WHERE id = ?`
-  ).run(...valores, id);
+export async function buscarProcessoPorId(id: string) {
+  await bancoPronto;
+  const [linha] = await sql`SELECT * FROM processos WHERE id = ${id}`;
+  return linha ? mapearProcesso(linha) : undefined;
 }
 
-export function deletarProcesso(id: string) {
-  db.prepare("DELETE FROM processos WHERE id = ?").run(id);
+export async function atualizarStatusProcesso(id: string, status: string) {
+  await bancoPronto;
+  await sql`UPDATE processos SET status = ${status} WHERE id = ${id}`;
 }
 
-export { db };
-export default db;
+export async function atualizarDadosProcesso(id: string, dados: Partial<Pick<Processo, keyof Processo>>) {
+  await bancoPronto;
+  const permitidos = {
+    numeroProcesso: "numero_processo",
+    partes: "partes",
+    varaComarca: "vara_comarca",
+    tipoAcao: "tipo_acao",
+    valorCausa: "valor_causa",
+    prazoVencimento: "prazo_vencimento",
+    andamentoAtual: "andamento_atual",
+    resumo: "resumo",
+    observacoes: "observacoes",
+  } as const;
+  const presentes = Object.keys(permitidos).filter((campo) => campo in dados) as (keyof typeof permitidos)[];
+  for (const campo of presentes) {
+    const coluna = permitidos[campo];
+    const valor = dados[campo] ?? null;
+    await sql`UPDATE processos SET ${sql.unsafe(coluna)} = ${valor} WHERE id = ${id}`;
+  }
+}
+
+export async function deletarProcesso(id: string) {
+  await bancoPronto;
+  await sql`DELETE FROM processos WHERE id = ${id}`;
+}

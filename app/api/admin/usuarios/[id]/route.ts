@@ -9,19 +9,19 @@ import {
   podeAdministrar,
 } from "@/lib/auth";
 
-function eAdmin(req: NextRequest) {
-  return podeAdministrar(usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value));
+async function eAdmin(req: NextRequest) {
+  return podeAdministrar(await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!eAdmin(req)) return NextResponse.json({ erro: "Acesso negado." }, { status: 403 });
+  if (!await eAdmin(req)) return NextResponse.json({ erro: "Acesso negado." }, { status: 403 });
   const { id } = await params;
   const corpo = await req.json().catch(() => null);
   const perfil = corpo?.perfil as Perfil | undefined;
   if (perfil && !["operador", "consulta"].includes(perfil)) {
     return NextResponse.json({ erro: "Perfil inválido." }, { status: 400 });
   }
-  atualizarUsuario(id, {
+  await atualizarUsuario(id, {
     perfil,
     permissoes: corpo?.permissoes as Permissoes | undefined,
     ativo: typeof corpo?.ativo === "boolean" ? corpo.ativo : undefined,
@@ -30,10 +30,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const usuario = usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
+  const usuario = await usuarioDaSessao(req.cookies.get(COOKIE_SESSAO)?.value);
   if (!usuario || !podeAdministrar(usuario)) return NextResponse.json({ erro: "Acesso negado." }, { status: 403 });
   const { id } = await params;
   if (id === usuario.id) return NextResponse.json({ erro: "Você não pode excluir seu próprio acesso." }, { status: 400 });
-  excluirUsuario(id);
+  await excluirUsuario(id);
   return NextResponse.json({ ok: true });
 }

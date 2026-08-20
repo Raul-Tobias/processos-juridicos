@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Produção
+
+O projeto usa PostgreSQL para manter processos, usuários e sessões persistentes em ambientes serverless como a Vercel.
+
+Configure `DATABASE_URL` e `ANTHROPIC_API_KEY` na Vercel e no ambiente local. Para preservar os dados do SQLite local, crie o banco PostgreSQL e execute:
+
+```bash
+npm run migrar:sqlite
+```
+
+O comando lê `data/processos.db` e não duplica registros já migrados.
