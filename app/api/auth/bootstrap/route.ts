@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { contarUsuarios, criarUsuario, EMAIL_ADMIN } from "@/lib/auth";
 
+export async function GET() {
+  return NextResponse.json({ primeiroAcesso: (await contarUsuarios()) === 0 });
+}
+
 export async function POST(req: Request) {
   if (await contarUsuarios() > 0) {
     return NextResponse.json({ erro: "A configuração inicial já foi concluída." }, { status: 409 });

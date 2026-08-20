@@ -14,12 +14,17 @@ export default function LoginPage() {
   const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me").then((res) => {
-      if (res.ok) router.replace("/");
-    });
-    fetch("/api/auth/bootstrap", { method: "POST", body: "{}" }).then((res) => {
-      setPrimeiroAcesso(res.status !== 409);
-    });
+    Promise.all([fetch("/api/auth/me"), fetch("/api/auth/bootstrap")])
+      .then(async ([sessao, bootstrap]) => {
+        if (sessao.ok) {
+          router.replace("/dashboard");
+          return;
+        }
+        if (!bootstrap.ok) throw new Error("Não foi possível verificar o acesso inicial.");
+        const dados = await bootstrap.json();
+        setPrimeiroAcesso(dados.primeiroAcesso === true);
+      })
+      .catch(() => setErro("Não foi possível conectar ao servidor."));
   }, [router]);
 
   async function enviar(evento: FormEvent) {
@@ -28,25 +33,35 @@ export default function LoginPage() {
     setErro("");
     const endpoint = primeiroAcesso ? "/api/auth/bootstrap" : "/api/auth/login";
     const body = primeiroAcesso ? { nome, email, senha } : { email, senha };
-    const resposta = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const dados = await resposta.json();
-    if (!resposta.ok) {
-      setErro(dados.erro ?? "Não foi possível concluir.");
+    try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 30_000);
+      const resposta = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeout);
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        setErro(dados.erro ?? "Não foi possível concluir.");
+        return;
+      }
+      if (primeiroAcesso) {
+        setPrimeiroAcesso(false);
+        setErro("Administrador criado. Entre com suas credenciais.");
+        return;
+      }
+      window.dispatchEvent(new Event("autos-auth-changed"));
+      router.replace("/dashboard");
+    } catch (error) {
+      setErro(error instanceof DOMException && error.name === "AbortError"
+        ? "O servidor demorou para responder. Tente novamente."
+        : "Não foi possível conectar ao servidor.");
+    } finally {
       setCarregando(false);
-      return;
     }
-    if (primeiroAcesso) {
-      setPrimeiroAcesso(false);
-      setErro("Administrador criado. Entre com suas credenciais.");
-      setCarregando(false);
-      return;
-    }
-    window.dispatchEvent(new Event("autos-auth-changed"));
-    router.push("/");
   }
 
   return (
