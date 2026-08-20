@@ -81,9 +81,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id, ...analise });
   } catch (erro) {
     console.error("Erro ao analisar processo:", erro);
+    const mensagem = erro instanceof Error ? erro.message : "";
+    const indisponibilidadeIA = /anthropic|pdf|document|model|api/i.test(mensagem);
     return NextResponse.json(
-      { erro: "Erro interno ao processar o documento." },
-      { status: 500 }
+      {
+        erro: indisponibilidadeIA
+          ? "A leitura visual do PDF não foi concluída. Verifique a chave da Anthropic e tente novamente."
+          : "Erro interno ao processar o documento.",
+      },
+      { status: indisponibilidadeIA ? 502 : 500 }
     );
   }
 }

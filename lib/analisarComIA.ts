@@ -72,7 +72,9 @@ export async function analisarPdfComIA(
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 1024,
-    system: PROMPT_SISTEMA,
+    system: `${PROMPT_SISTEMA}
+
+  Este é um PDF escaneado. Examine visualmente todas as páginas e leia os textos impressos nas imagens, incluindo cabeçalhos, números, datas, partes, prazos e autos de infração. Não responda que o PDF não possui texto: use a informação visual das páginas.`,
     messages: [
       {
         role: "user",
@@ -87,11 +89,15 @@ export async function analisarPdfComIA(
           },
           {
             type: "text",
-            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}\n\nAnalise este processo e retorne o JSON solicitado.`,
+            text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}\n\nLeia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis e retorne somente o JSON solicitado.`,
           },
         ],
       },
     ],
+  }, {
+    headers: {
+      "anthropic-beta": "pdfs-2024-09-25",
+    },
   });
 
   const textBlock = response.content.find((b) => b.type === "text");
