@@ -60,12 +60,15 @@ export async function inicializarBanco() {
   `;
 }
 
-export const bancoPronto = process.env.DATABASE_URL
-  ? inicializarBanco()
-  : Promise.resolve();
+export const bancoPronto = process.env.DATABASE_URL ? inicializarBanco() : null;
+
+export async function garantirBanco() {
+  if (!bancoPronto) throw new Error("DATABASE_URL não configurada.");
+  await bancoPronto;
+}
 
 export async function inserirProcesso(processo: Processo) {
-  await bancoPronto;
+  await garantirBanco();
   await sql`
     INSERT INTO processos ${sql({
       id: processo.id,
@@ -104,24 +107,24 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
 }
 
 export async function listarProcessos() {
-  await bancoPronto;
+  await garantirBanco();
   const linhas = await sql`SELECT * FROM processos ORDER BY criado_em DESC`;
   return linhas.map((linha) => mapearProcesso(linha));
 }
 
 export async function buscarProcessoPorId(id: string) {
-  await bancoPronto;
+  await garantirBanco();
   const [linha] = await sql`SELECT * FROM processos WHERE id = ${id}`;
   return linha ? mapearProcesso(linha) : undefined;
 }
 
 export async function atualizarStatusProcesso(id: string, status: string) {
-  await bancoPronto;
+  await garantirBanco();
   await sql`UPDATE processos SET status = ${status} WHERE id = ${id}`;
 }
 
 export async function atualizarDadosProcesso(id: string, dados: Partial<Pick<Processo, keyof Processo>>) {
-  await bancoPronto;
+  await garantirBanco();
   const permitidos = {
     numeroProcesso: "numero_processo",
     partes: "partes",
@@ -142,6 +145,6 @@ export async function atualizarDadosProcesso(id: string, dados: Partial<Pick<Pro
 }
 
 export async function deletarProcesso(id: string) {
-  await bancoPronto;
+  await garantirBanco();
   await sql`DELETE FROM processos WHERE id = ${id}`;
 }
