@@ -39,6 +39,10 @@ export default function DetalheProcesso() {
   useEffect(() => {
     fetch(`/api/processos/${id}`)
       .then((r) => {
+        if (r.status === 401) {
+          router.replace("/login");
+          throw new Error();
+        }
         if (!r.ok) throw new Error();
         return r.json();
       })
@@ -58,7 +62,7 @@ export default function DetalheProcesso() {
         setErro(true);
         setCarregando(false);
       });
-  }, [id]);
+  }, [id, router]);
 
   if (carregando) {
     return (

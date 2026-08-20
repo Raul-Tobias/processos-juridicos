@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 import { FolderOpen, Search } from "lucide-react";
@@ -15,6 +16,7 @@ const FILTROS = [
 ];
 
 export default function ListaProcessos() {
+  const router = useRouter();
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState("todos");
@@ -23,12 +25,21 @@ export default function ListaProcessos() {
 
   useEffect(() => {
     fetch("/api/processos")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (r.status === 401) {
+          router.replace("/login");
+          return null;
+        }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((dados) => {
+        if (!Array.isArray(dados)) return;
         setProcessos(dados);
         setCarregando(false);
-      });
-  }, []);
+      })
+      .catch(() => setCarregando(false));
+  }, [router]);
 
   const termo = busca.trim().toLocaleLowerCase();
   const filtrados = processos.filter((p) => {

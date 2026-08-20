@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   PieChart,
   Pie,
@@ -40,17 +41,27 @@ function diasAteVencimento(dataISO: string | null): number | null {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     fetch("/api/processos")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (r.status === 401) {
+          router.replace("/login");
+          return null;
+        }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((dados) => {
+        if (!Array.isArray(dados)) return;
         setProcessos(dados);
         setCarregando(false);
-      });
-  }, []);
+      })
+      .catch(() => setCarregando(false));
+  }, [router]);
 
   const dadosStatus = useMemo(() => {
     const contagem: Record<string, number> = {};
