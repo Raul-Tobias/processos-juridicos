@@ -16,8 +16,10 @@ async function main() {
         id TEXT PRIMARY KEY, numero_processo TEXT, partes TEXT, vara_comarca TEXT,
         tipo_acao TEXT, valor_causa TEXT, status TEXT NOT NULL DEFAULT 'em_andamento',
         prazo_vencimento TEXT, andamento_atual TEXT, resumo TEXT, observacoes TEXT,
+        bloqueio_judicial JSONB,
         nome_arquivo TEXT, criado_em TIMESTAMPTZ NOT NULL
       );
+      ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB;
       CREATE TABLE IF NOT EXISTS usuarios (
         id TEXT PRIMARY KEY, nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
         senha_hash TEXT NOT NULL, perfil TEXT NOT NULL DEFAULT 'consulta',
@@ -38,6 +40,7 @@ async function main() {
         status: p.status, prazo_vencimento: p.prazoVencimento,
         andamento_atual: p.andamentoAtual, resumo: p.resumo,
         observacoes: p.observacoes ?? null, nome_arquivo: p.nomeArquivo,
+        bloqueio_judicial: p.bloqueioJudicial ? JSON.parse(p.bloqueioJudicial) : null,
         criado_em: p.criadoEm,
       })} ON CONFLICT (id) DO NOTHING`;
     }

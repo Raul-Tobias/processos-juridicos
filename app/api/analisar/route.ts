@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       analise.prazoVencimento,
       analise.andamentoAtual,
       analise.resumo,
+      analise.bloqueioJudicial,
     ].filter(Boolean).length;
     console.info("Campos identificados pela IA:", camposIdentificados);
 
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
       prazoVencimento: analise.prazoVencimento,
       andamentoAtual: analise.andamentoAtual,
       resumo: analise.resumo,
+      bloqueioJudicial: analise.bloqueioJudicial,
       nomeArquivo: arquivo.name,
       criadoEm,
     });

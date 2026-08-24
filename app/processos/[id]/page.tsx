@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Processo } from "@/lib/db";
+import type { BloqueioJudicial } from "@/lib/analisarComIA";
 import StatusBadge from "@/components/StatusBadge";
 import {
   ArrowLeft,
@@ -13,7 +14,10 @@ import {
   CircleAlert,
 } from "lucide-react";
 
-const CAMPOS: { chave: keyof Processo; label: string }[] = [
+const CAMPOS: {
+  chave: Exclude<keyof Processo, "bloqueioJudicial" | "observacoes">;
+  label: string;
+}[] = [
   { chave: "numeroProcesso", label: "Número do processo" },
   { chave: "partes", label: "Partes" },
   { chave: "varaComarca", label: "Vara / Comarca" },
@@ -243,6 +247,44 @@ export default function DetalheProcesso() {
         </dl>
       )}
 
+      {processo.bloqueioJudicial && (
+        <section className="mt-6 border border-accent/20 bg-accent/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-accent/15">
+            <h2 className="font-serif text-xl font-semibold">Bloqueio judicial</h2>
+            <p className="text-sm text-ink/55 mt-1">
+              Informações identificadas no documento enviado
+            </p>
+          </div>
+          <dl className="divide-y divide-accent/10">
+            <LinhaBloqueio label="Identificado">
+              {rotuloIdentificacao(processo.bloqueioJudicial.identificado)}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Valor bloqueado">
+              {processo.bloqueioJudicial.valor}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Data do bloqueio">
+              {processo.bloqueioJudicial.data}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Contas / instituições">
+              {processo.bloqueioJudicial.contas.length > 0
+                ? processo.bloqueioJudicial.contas.join("; ")
+                : null}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Pedido de desbloqueio">
+              {rotuloIdentificacao(
+                processo.bloqueioJudicial.manifestacaoDesbloqueio.identificada
+              )}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Detalhes da manifestação">
+              {processo.bloqueioJudicial.manifestacaoDesbloqueio.detalhes}
+            </LinhaBloqueio>
+            <LinhaBloqueio label="Data da manifestação">
+              {processo.bloqueioJudicial.manifestacaoDesbloqueio.data}
+            </LinhaBloqueio>
+          </dl>
+        </section>
+      )}
+
       {!editando && processo.observacoes && (
         <div className="mt-5 rounded-2xl border border-gold/20 bg-gold/5 px-5 py-4">
           <p className="font-mono text-[11px] uppercase tracking-wide text-gold mb-2">
@@ -372,6 +414,29 @@ export default function DetalheProcesso() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function rotuloIdentificacao(valor: BloqueioJudicial["identificado"]) {
+  return valor === "sim" ? "Sim" : valor === "nao" ? "Não" : "Não identificado";
+}
+
+function LinhaBloqueio({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 px-5 py-3.5">
+      <dt className="font-mono text-[11px] uppercase tracking-wide text-ink/45">
+        {label}
+      </dt>
+      <dd className="sm:col-span-2 text-ink/85">
+        {children || <span className="text-ink/30">Não identificado</span>}
+      </dd>
     </div>
   );
 }

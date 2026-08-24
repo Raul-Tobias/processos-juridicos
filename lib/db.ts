@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import type { BloqueioJudicial } from "@/lib/analisarComIA";
 
 export const sql = postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/autos", {
   prepare: false,
@@ -16,6 +17,7 @@ export interface Processo {
   prazoVencimento: string | null;
   andamentoAtual: string | null;
   resumo: string | null;
+  bloqueioJudicial: BloqueioJudicial | null;
   observacoes?: string | null;
   nomeArquivo: string | null;
   criadoEm: string;
@@ -35,10 +37,12 @@ export async function inicializarBanco() {
       andamento_atual TEXT,
       resumo TEXT,
       observacoes TEXT,
+      bloqueio_judicial JSONB,
       nome_arquivo TEXT,
       criado_em TIMESTAMPTZ NOT NULL
     )
   `;
+  await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB`;
   await sql`
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY,
@@ -81,6 +85,9 @@ export async function inserirProcesso(processo: Processo) {
       prazo_vencimento: processo.prazoVencimento,
       andamento_atual: processo.andamentoAtual,
       resumo: processo.resumo,
+      bloqueio_judicial: processo.bloqueioJudicial
+        ? JSON.stringify(processo.bloqueioJudicial)
+        : null,
       observacoes: processo.observacoes ?? null,
       nome_arquivo: processo.nomeArquivo,
       criado_em: processo.criadoEm,
@@ -100,6 +107,7 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
     prazoVencimento: linha.prazo_vencimento as string | null,
     andamentoAtual: linha.andamento_atual as string | null,
     resumo: linha.resumo as string | null,
+    bloqueioJudicial: (linha.bloqueio_judicial as BloqueioJudicial | null) ?? null,
     observacoes: linha.observacoes as string | null,
     nomeArquivo: linha.nome_arquivo as string | null,
     criadoEm: new Date(String(linha.criado_em)).toISOString(),

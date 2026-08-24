@@ -14,6 +14,19 @@ export interface AnaliseProcesso {
   prazoVencimento: string | null; // formato YYYY-MM-DD ou null
   andamentoAtual: string | null;
   resumo: string | null;
+  bloqueioJudicial: BloqueioJudicial | null;
+}
+
+export interface BloqueioJudicial {
+  identificado: "sim" | "nao" | "nao_identificado";
+  valor: string | null;
+  data: string | null;
+  contas: string[];
+  manifestacaoDesbloqueio: {
+    identificada: "sim" | "nao" | "nao_identificado";
+    detalhes: string | null;
+    data: string | null;
+  };
 }
 
 const PROMPT_SISTEMA = `Você é um assistente especializado em análise de processos jurídicos brasileiros.
@@ -29,7 +42,19 @@ Você receberá o texto extraído de um documento de processo judicial e deve re
   "status": um de "em_andamento" | "urgente" | "aguardando" | "arquivado",
   "prazoVencimento": string no formato YYYY-MM-DD ou null (próximo prazo relevante, se houver),
   "andamentoAtual": string ou null (breve descrição do último andamento),
-  "resumo": string ou null (resumo de até 3 frases do processo)
+  "resumo": string ou null (resumo de até 3 frases do processo),
+  "bloqueioJudicial": objeto ou null, com:
+    {
+      "identificado": "sim" | "nao" | "nao_identificado",
+      "valor": string ou null (valor bloqueado, como aparece no documento),
+      "data": string ou null (data do bloqueio no formato YYYY-MM-DD quando possível),
+      "contas": array de strings (banco, agência, conta ou instituição identificados),
+      "manifestacaoDesbloqueio": {
+        "identificada": "sim" | "nao" | "nao_identificado",
+        "detalhes": string ou null (síntese do pedido de desbloqueio),
+        "data": string ou null (data da manifestação no formato YYYY-MM-DD quando possível)
+      }
+    }
 }
 
 Use "urgente" quando houver prazo em até 5 dias corridos a partir de hoje ou termos como "urgente", "liminar".
@@ -42,7 +67,7 @@ export async function analisarProcessoComIA(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1024,
+    max_tokens: 1536,
     system: PROMPT_SISTEMA,
     messages: [
       {
@@ -72,7 +97,7 @@ export async function analisarPdfComIA(
 ): Promise<AnaliseProcesso> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1024,
+    max_tokens: 1536,
     system: `${PROMPT_SISTEMA}
 
   Este é um PDF escaneado. Examine visualmente todas as páginas e leia os textos impressos nas imagens, incluindo cabeçalhos, números, datas, partes, prazos e autos de infração. Não responda que o PDF não possui texto: use a informação visual das páginas.`,
