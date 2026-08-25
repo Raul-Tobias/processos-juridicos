@@ -54,7 +54,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const texto = await extrairTextoDoPdf(buffer);
+    let texto = "";
+    try {
+      texto = await extrairTextoDoPdf(buffer);
+    } catch (erroOcr) {
+      console.warn("OCR auxiliar não concluído; seguindo com leitura visual:", erroOcr);
+    }
     console.info("Texto extraído do documento:", texto.trim().length, "caracteres");
     const analise =
       texto.trim().length >= 30
