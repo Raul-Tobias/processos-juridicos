@@ -23,6 +23,50 @@ export interface Processo {
   criadoEm: string;
 }
 
+const IDENTIFICACOES_BLOQUEIO = ["sim", "nao", "nao_identificado"] as const;
+
+function normalizarIdentificacao(valor: unknown): BloqueioJudicial["identificado"] {
+  return IDENTIFICACOES_BLOQUEIO.includes(valor as BloqueioJudicial["identificado"])
+    ? (valor as BloqueioJudicial["identificado"])
+    : "nao_identificado";
+}
+
+function normalizarTexto(valor: unknown) {
+  return typeof valor === "string" && valor.trim() ? valor : null;
+}
+
+function normalizarBloqueioJudicial(valor: unknown): BloqueioJudicial | null {
+  let bruto = valor;
+  if (typeof bruto === "string") {
+    try {
+      bruto = JSON.parse(bruto);
+    } catch {
+      return null;
+    }
+  }
+  if (!bruto || typeof bruto !== "object") return null;
+
+  const objeto = bruto as Record<string, unknown>;
+  const manifestacao =
+    objeto.manifestacaoDesbloqueio && typeof objeto.manifestacaoDesbloqueio === "object"
+      ? (objeto.manifestacaoDesbloqueio as Record<string, unknown>)
+      : {};
+
+  return {
+    identificado: normalizarIdentificacao(objeto.identificado),
+    valor: normalizarTexto(objeto.valor),
+    data: normalizarTexto(objeto.data),
+    contas: Array.isArray(objeto.contas)
+      ? objeto.contas.filter((conta): conta is string => typeof conta === "string")
+      : [],
+    manifestacaoDesbloqueio: {
+      identificada: normalizarIdentificacao(manifestacao.identificada),
+      detalhes: normalizarTexto(manifestacao.detalhes),
+      data: normalizarTexto(manifestacao.data),
+    },
+  };
+}
+
 export async function inicializarBanco() {
   await sql`
     CREATE TABLE IF NOT EXISTS processos (
@@ -107,7 +151,7 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
     prazoVencimento: linha.prazo_vencimento as string | null,
     andamentoAtual: linha.andamento_atual as string | null,
     resumo: linha.resumo as string | null,
-    bloqueioJudicial: (linha.bloqueio_judicial as BloqueioJudicial | null) ?? null,
+    bloqueioJudicial: normalizarBloqueioJudicial(linha.bloqueio_judicial),
     observacoes: linha.observacoes as string | null,
     nomeArquivo: linha.nome_arquivo as string | null,
     criadoEm: new Date(String(linha.criado_em)).toISOString(),
