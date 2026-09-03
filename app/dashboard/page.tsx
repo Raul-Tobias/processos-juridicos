@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
-import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2, Filter } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2, Search, SlidersHorizontal } from "lucide-react";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -36,6 +36,9 @@ export default function Dashboard() {
   const [carregando, setCarregando] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroBloqueio, setFiltroBloqueio] = useState("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState("todos");
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [busca, setBusca] = useState("");
 
   useEffect(() => {
     fetch("/api/processos")
@@ -56,13 +59,25 @@ export default function Dashboard() {
   }, [router]);
 
   const processosFiltrados = useMemo(
-    () => processos.filter((p) =>
-      (filtroStatus === "todos" || p.status === filtroStatus) &&
-      (filtroBloqueio === "todos" || (filtroBloqueio === "sim"
-        ? p.bloqueioJudicial?.identificado === "sim"
-        : p.bloqueioJudicial?.identificado !== "sim"))
-    ),
-    [filtroBloqueio, filtroStatus, processos]
+    () => processos.filter((p) => {
+      const texto = [p.numeroProcesso, p.partes, p.tipoAcao, p.varaComarca].filter(Boolean).join(" ").toLocaleLowerCase();
+      const criadoEm = new Date(p.criadoEm);
+      const agora = new Date();
+      const correspondePeriodo = filtroPeriodo === "todos" || (filtroPeriodo === "mes" && criadoEm.getMonth() === agora.getMonth() && criadoEm.getFullYear() === agora.getFullYear());
+      return (filtroStatus === "todos" || p.status === filtroStatus) &&
+        (filtroTipo === "todos" || p.tipoAcao === filtroTipo) &&
+        correspondePeriodo &&
+        (!busca.trim() || texto.includes(busca.trim().toLocaleLowerCase())) &&
+        (filtroBloqueio === "todos" || (filtroBloqueio === "sim"
+          ? p.bloqueioJudicial?.identificado === "sim"
+          : p.bloqueioJudicial?.identificado !== "sim"));
+    }),
+    [busca, filtroBloqueio, filtroPeriodo, filtroStatus, filtroTipo, processos]
+  );
+
+  const tiposDisponiveis = useMemo(
+    () => Array.from(new Set(processos.map((p) => p.tipoAcao).filter((tipo): tipo is string => Boolean(tipo)))),
+    [processos]
   );
 
   const dadosStatus = useMemo(() => {
@@ -160,15 +175,19 @@ export default function Dashboard() {
         Visão geral dos processos analisados.
       </p>
 
-      <section className="border-y border-ink/10 py-4 mb-10">
+      <section className="border border-ink/10 bg-white/35 rounded-xl p-4 mb-8">
         <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-accent" strokeWidth={1.8} />
+          <SlidersHorizontal className="w-4 h-4 text-accent" strokeWidth={1.8} />
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/50">Filtros</h2>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <label className="flex items-center gap-2 text-sm text-ink/60">
-            Status
-            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <label className="text-xs text-ink/55">Período
+            <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+              <option value="todos">Todos</option><option value="mes">Este mês</option>
+            </select>
+          </label>
+          <label className="text-xs text-ink/55">Status
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
               <option value="todos">Todos</option>
               <option value="em_andamento">Em andamento</option>
               <option value="urgente">Urgente</option>
@@ -176,14 +195,29 @@ export default function Dashboard() {
               <option value="arquivado">Arquivado</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm text-ink/60">
-            Bloqueio judicial
-            <select value={filtroBloqueio} onChange={(e) => setFiltroBloqueio(e.target.value)} className="rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+          <label className="text-xs text-ink/55">Responsável
+            <select disabled className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink/50 outline-none"><option>Todos</option></select>
+          </label>
+          <label className="text-xs text-ink/55">Tipo
+            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+              <option value="todos">Todos</option>
+              {tiposDisponiveis.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+            </select>
+          </label>
+          <label className="relative text-xs text-ink/55">Buscar processo
+            <Search className="absolute left-3 bottom-2.5 w-4 h-4 text-ink/35" />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar processo" className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 py-2 pl-9 pr-3 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-accent/50" />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="text-xs text-ink/55">Bloqueio judicial
+            <select value={filtroBloqueio} onChange={(e) => setFiltroBloqueio(e.target.value)} className="ml-2 rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
               <option value="todos">Todos</option>
               <option value="sim">Identificado</option>
               <option value="nao">Não identificado</option>
             </select>
           </label>
+          <button onClick={() => { setFiltroPeriodo("todos"); setFiltroStatus("todos"); setFiltroBloqueio("todos"); setFiltroTipo("todos"); setBusca(""); }} className="font-mono text-[10px] uppercase tracking-wide text-accent hover:text-accent-light">Limpar filtros</button>
         </div>
       </section>
 
@@ -223,7 +257,7 @@ export default function Dashboard() {
 
       <section className="mb-12">
         <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-5">Visão operacional</h2>
-        <div className="grid sm:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-3 gap-4">
         <div>
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
             Status dos processos
@@ -290,44 +324,36 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div>
-      </section>
-
-      {atencao.length > 0 && (
-        <section className="mb-12">
+        <div>
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
             Atenção necessária
           </h2>
           <div className="border border-ink/10 rounded-xl divide-y divide-ink/10 overflow-hidden">
-            {atencao.map((p) => (
-              <Link
-                key={p.id}
-                href={`/processos/${p.id}`}
-                className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-ink/[0.03] transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">
-                    {p.partes ?? p.nomeArquivo}
-                  </p>
-                  <p className="font-mono text-xs text-ink/45 truncate mt-0.5">
-                    {p.numeroProcesso ?? "Número não identificado"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span
-                    className={`font-mono text-xs ${
-                      (p.dias ?? 0) <= 2 ? "text-accent font-medium" : "text-ink/50"
-                    }`}
-                  >
-                    {(p.dias ?? 0) < 0 ? `${Math.abs(p.dias ?? 0)} dias atrasado` : p.dias === 0 ? "vence hoje" : `${p.dias} dias`}
-                  </span>
-                  <StatusBadge status={p.status} />
-                </div>
-              </Link>
-            ))}
+            <Link href="/processos?filtro=urgente" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
+              <div>
+                <p className="font-medium text-sm">Processos urgentes</p>
+                <p className="text-xs text-ink/45 mt-1">Requerem prioridade máxima</p>
+              </div>
+              <span className="font-serif text-2xl text-ink/65">{processosFiltrados.filter((p) => p.status === "urgente").length}</span>
+            </Link>
+            <Link href="/dashboard" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
+              <div>
+                <p className="font-medium text-sm">Processos com prazo vencido</p>
+                <p className="text-xs text-ink/45 mt-1">Requerem atenção imediata</p>
+              </div>
+              <span className="font-serif text-2xl text-accent">{prazosVencidos}</span>
+            </Link>
+            <Link href="/dashboard" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
+              <div>
+                <p className="font-medium text-sm">Prazos nos próximos 7 dias</p>
+                <p className="text-xs text-ink/45 mt-1">Acompanhe os próximos prazos</p>
+              </div>
+              <span className="font-serif text-2xl text-gold">{prazosProximos}</span>
+            </Link>
           </div>
-        </section>
-      )}
+        </div>
+      </div>
+      </section>
 
       <section>
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -348,7 +374,9 @@ export default function Dashboard() {
               <tr className="font-mono text-[10px] uppercase tracking-widest text-ink/40">
                 <th className="px-4 sm:px-5 py-3 font-normal">Processo</th>
                 <th className="px-4 py-3 font-normal">Tipo de ação</th>
-                <th className="px-4 py-3 font-normal">Data</th>
+                <th className="px-4 py-3 font-normal">Prazo</th>
+                <th className="px-4 py-3 font-normal">Responsável</th>
+                <th className="px-4 py-3 font-normal">Atualização</th>
                 <th className="px-4 sm:px-5 py-3 font-normal">Status</th>
               </tr>
             </thead>
@@ -363,9 +391,11 @@ export default function Dashboard() {
                 <p className="text-xs text-ink/45 truncate mt-0.5">{p.numeroProcesso ?? "Número não identificado"}</p>
               </td>
               <td className="px-4 py-4 text-sm text-ink/55">{p.tipoAcao ?? "Não identificado"}</td>
-              <td className="px-4 py-4 font-mono text-[11px] text-ink/40">
-                  {new Date(p.criadoEm).toLocaleDateString("pt-BR")}
+              <td className={`px-4 py-4 font-mono text-[11px] ${p.prazoVencimento && diasAteVencimento(p.prazoVencimento)! < 0 ? "text-accent" : "text-ink/40"}`}>
+                {p.prazoVencimento ?? "-"}
               </td>
+              <td className="px-4 py-4 text-sm text-ink/40">-</td>
+              <td className="px-4 py-4 font-mono text-[11px] text-ink/40">{new Date(p.criadoEm).toLocaleDateString("pt-BR")}</td>
               <td className="px-4 sm:px-5 py-4"><StatusBadge status={p.status} /></td>
             </tr>
           ))}
