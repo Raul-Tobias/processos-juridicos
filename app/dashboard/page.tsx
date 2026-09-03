@@ -3,17 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2, Filter } from "lucide-react";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
@@ -76,27 +66,17 @@ export default function Dashboard() {
   );
 
   const dadosStatus = useMemo(() => {
-    const contagem: Record<string, number> = {};
-    processosFiltrados.forEach((p) => {
-      contagem[p.status] = (contagem[p.status] ?? 0) + 1;
-    });
-    return Object.entries(contagem).map(([status, valor]) => ({
+    const ordem = ["aguardando", "em_andamento", "arquivado", "urgente"];
+    return ordem.map((status) => ({
       status,
-      valor,
+      valor: processosFiltrados.filter((p) => p.status === status).length,
     }));
   }, [processosFiltrados]);
 
-  const dadosPrazos = useMemo(() => {
+  const prazosCriticos = useMemo(() => {
     return processosFiltrados
-      .filter((p) => p.prazoVencimento)
-      .map((p) => ({
-        nome:
-          (p.numeroProcesso ?? p.nomeArquivo ?? "Processo").slice(0, 18) +
-          "…",
-        dias: diasAteVencimento(p.prazoVencimento),
-        id: p.id,
-      }))
-      .filter((p) => p.dias !== null)
+      .map((p) => ({ ...p, dias: diasAteVencimento(p.prazoVencimento) }))
+      .filter((p) => p.status !== "arquivado" && p.dias !== null && p.dias < 0)
       .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))
       .slice(0, 8);
   }, [processosFiltrados]);
@@ -250,24 +230,18 @@ export default function Dashboard() {
           </h2>
           <div className="h-64 border border-ink/10 rounded-xl p-4">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={dadosStatus}
-                  dataKey="valor"
-                  nameKey="status"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={2}
-                >
-                  {dadosStatus.map((d) => (
-                    <Cell key={d.status} fill={CORES_STATUS[d.status]} />
-                  ))}
-                </Pie>
+              <BarChart data={dadosStatus} layout="vertical" margin={{ left: 8, right: 12 }}>
+                <XAxis type="number" allowDecimals={false} fontSize={11} stroke="#1c243155" />
+                <YAxis
+                  type="category"
+                  dataKey="status"
+                  width={90}
+                  fontSize={11}
+                  stroke="#1c243155"
+                  tickFormatter={(status) => LABEL_STATUS[status]}
+                />
                 <Tooltip
-                  formatter={(valor, _nome, item) => [
-                    valor,
-                    LABEL_STATUS[item.payload.status as string],
-                  ]}
+                  formatter={(valor) => [valor, "Processos"]}
                   contentStyle={{
                     fontFamily: "var(--font-sans)",
                     fontSize: 13,
@@ -275,58 +249,45 @@ export default function Dashboard() {
                     border: "1px solid #1c243120",
                   }}
                 />
-              </PieChart>
+                <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
+                  {dadosStatus.map((d) => (
+                    <Cell key={d.status} fill={CORES_STATUS[d.status]} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap gap-3 mt-3">
-            {dadosStatus.map((d) => (
-              <div key={d.status} className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: CORES_STATUS[d.status] }}
-                />
-                <span className="text-xs text-ink/60">
-                  {LABEL_STATUS[d.status]}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
 
         <div>
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Prazos críticos
+            Prazos mais críticos
           </h2>
-          <div className="h-64 border border-ink/10 rounded-xl p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosPrazos} layout="vertical" margin={{ left: 0 }}>
-                <XAxis type="number" fontSize={11} stroke="#1c243155" />
-                <YAxis
-                  type="category"
-                  dataKey="nome"
-                  width={110}
-                  fontSize={11}
-                  stroke="#1c243155"
-                />
-                <Tooltip
-                  formatter={(v) => [`${v} dias`, "Prazo"]}
-                  contentStyle={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 13,
-                    borderRadius: 8,
-                    border: "1px solid #1c243120",
-                  }}
-                />
-                <Bar dataKey="dias" radius={[0, 4, 4, 0]}>
-                  {dadosPrazos.map((d) => (
-                    <Cell
-                      key={d.id}
-                      fill={(d.dias ?? 99) <= 5 ? "#7a2e33" : "#1c2431"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="border border-ink/10 rounded-xl divide-y divide-ink/10 overflow-hidden">
+            {prazosCriticos.length === 0 ? (
+              <p className="px-4 py-8 text-sm text-ink/45">Nenhum prazo vencido.</p>
+            ) : (
+              prazosCriticos.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/processos/${p.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-ink/[0.03] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">
+                      {p.numeroProcesso ?? p.partes ?? p.nomeArquivo}
+                    </p>
+                    <p className="text-xs text-ink/45 truncate mt-0.5">
+                      {p.partes ?? "Processo sem partes identificadas"}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1.5 shrink-0 font-mono text-xs text-accent font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {Math.abs(p.dias ?? 0)} dias atrasado
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>
