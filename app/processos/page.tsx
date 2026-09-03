@@ -13,13 +13,18 @@ const FILTROS = [
   { valor: "em_andamento", label: "Em andamento" },
   { valor: "aguardando", label: "Aguardando" },
   { valor: "arquivado", label: "Arquivados" },
+  { valor: "bloqueio", label: "Bloqueio judicial" },
 ];
 
 export default function ListaProcessos() {
   const router = useRouter();
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [filtro, setFiltro] = useState("todos");
+  const [filtro, setFiltro] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filtro") === "bloqueio"
+      ? "bloqueio"
+      : "todos"
+  );
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState("recentes");
 
@@ -43,7 +48,11 @@ export default function ListaProcessos() {
 
   const termo = busca.trim().toLocaleLowerCase();
   const filtrados = processos.filter((p) => {
-    const correspondeStatus = filtro === "todos" || p.status === filtro;
+    const correspondeStatus = filtro === "todos"
+      ? true
+      : filtro === "bloqueio"
+        ? p.bloqueioJudicial?.identificado === "sim"
+        : p.status === filtro;
     const texto = [
       p.numeroProcesso,
       p.partes,
