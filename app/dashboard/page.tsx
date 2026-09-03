@@ -14,7 +14,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
-import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2, Filter } from "lucide-react";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -44,6 +44,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroBloqueio, setFiltroBloqueio] = useState("todos");
 
   useEffect(() => {
     fetch("/api/processos")
@@ -63,19 +65,29 @@ export default function Dashboard() {
       .catch(() => setCarregando(false));
   }, [router]);
 
+  const processosFiltrados = useMemo(
+    () => processos.filter((p) =>
+      (filtroStatus === "todos" || p.status === filtroStatus) &&
+      (filtroBloqueio === "todos" || (filtroBloqueio === "sim"
+        ? p.bloqueioJudicial?.identificado === "sim"
+        : p.bloqueioJudicial?.identificado !== "sim"))
+    ),
+    [filtroBloqueio, filtroStatus, processos]
+  );
+
   const dadosStatus = useMemo(() => {
     const contagem: Record<string, number> = {};
-    processos.forEach((p) => {
+    processosFiltrados.forEach((p) => {
       contagem[p.status] = (contagem[p.status] ?? 0) + 1;
     });
     return Object.entries(contagem).map(([status, valor]) => ({
       status,
       valor,
     }));
-  }, [processos]);
+  }, [processosFiltrados]);
 
   const dadosPrazos = useMemo(() => {
-    return processos
+    return processosFiltrados
       .filter((p) => p.prazoVencimento)
       .map((p) => ({
         nome:
@@ -87,10 +99,10 @@ export default function Dashboard() {
       .filter((p) => p.dias !== null)
       .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))
       .slice(0, 8);
-  }, [processos]);
+  }, [processosFiltrados]);
 
   const urgentesProximos = useMemo(() => {
-    return processos
+    return processosFiltrados
       .map((p) => ({ ...p, dias: diasAteVencimento(p.prazoVencimento) }))
       .filter(
         (p) =>
@@ -100,30 +112,37 @@ export default function Dashboard() {
           p.dias <= 7
       )
       .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0));
-  }, [processos]);
+  }, [processosFiltrados]);
 
   const prazosVencidos = useMemo(
     () =>
-      processos.filter((p) => {
+      processosFiltrados.filter((p) => {
         const dias = diasAteVencimento(p.prazoVencimento);
         return dias !== null && dias < 0 && p.status !== "arquivado";
       }).length,
-    [processos]
+    [processosFiltrados]
   );
 
   const prazosProximos = urgentesProximos.length;
-  const processosAtivos = processos.filter(
+  const processosAtivos = processosFiltrados.filter(
     (p) => p.status !== "arquivado"
   ).length;
+  const atencao = useMemo(
+    () => processosFiltrados
+      .map((p) => ({ ...p, dias: diasAteVencimento(p.prazoVencimento) }))
+      .filter((p) => p.status !== "arquivado" && p.dias !== null && p.dias <= 7)
+      .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0)),
+    [processosFiltrados]
+  );
   const recentes = useMemo(
     () =>
-      [...processos]
+      [...processosFiltrados]
         .sort(
           (a, b) =>
             new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
         )
         .slice(0, 5),
-    [processos]
+    [processosFiltrados]
   );
 
   if (carregando) {
@@ -152,17 +171,45 @@ export default function Dashboard() {
   return (
     <div className="max-w-5xl mx-auto px-5 sm:px-6 pt-12 sm:pt-14 pb-24">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent mb-2">
-        Visão operacional
+        Dashboard
       </p>
       <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-[-0.02em] mb-2">
         Dashboard
       </h1>
       <p className="text-ink/50 mb-10">
-        Visão geral dos {processos.length}{" "}
-        {processos.length === 1 ? "processo" : "processos"} analisados.
+        Visão geral dos processos analisados.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+      <section className="border-y border-ink/10 py-4 mb-10">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter className="w-4 h-4 text-accent" strokeWidth={1.8} />
+          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/50">Filtros</h2>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex items-center gap-2 text-sm text-ink/60">
+            Status
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+              <option value="todos">Todos</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="urgente">Urgente</option>
+              <option value="aguardando">Aguardando</option>
+              <option value="arquivado">Arquivado</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink/60">
+            Bloqueio judicial
+            <select value={filtroBloqueio} onChange={(e) => setFiltroBloqueio(e.target.value)} className="rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+              <option value="todos">Todos</option>
+              <option value="sim">Identificado</option>
+              <option value="nao">Não identificado</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="mb-12">
+        <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">Indicadores</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-paper/70 px-4 py-4">
           <FileCheck2 className="w-5 h-5 text-ink/45 mt-0.5" />
           <div>
@@ -184,39 +231,22 @@ export default function Dashboard() {
             <p className="text-sm text-ink/55">prazos que exigem atenção</p>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-10">
-        {(["em_andamento", "urgente", "aguardando", "arquivado"] as const).map(
-          (status) => {
-            const total = processos.filter((p) => p.status === status).length;
-            return (
-              <div
-                key={status}
-                className="border border-ink/10 bg-paper/70 rounded-2xl px-4 py-5 shadow-[0_8px_24px_#1c243106]"
-              >
-                <p className="font-serif text-3xl font-semibold">{total}</p>
-                <p className="font-mono text-[11px] uppercase tracking-wide text-ink/40 mt-1">
-                  {LABEL_STATUS[status]}
-                </p>
-              </div>
-            );
-          }
-        )}
-        <div className="border border-accent/20 bg-accent/5 rounded-2xl px-4 py-5 shadow-[0_8px_24px_#7a2e3310]">
-          <p className="font-serif text-3xl font-semibold text-accent">
-            {prazosVencidos}
-          </p>
-          <p className="font-mono text-[11px] uppercase tracking-wide text-accent/70 mt-1">
-            Prazos vencidos
-          </p>
+        <div className="flex items-start gap-3 rounded-2xl border border-accent/25 bg-accent/5 px-4 py-4">
+          <AlertTriangle className="w-5 h-5 text-accent mt-0.5" />
+          <div>
+            <p className="font-serif text-2xl font-semibold text-accent">{atencao.length}</p>
+            <p className="text-sm text-ink/55">exigem atenção</p>
+          </div>
         </div>
       </div>
+      </section>
 
-      <div className="grid sm:grid-cols-2 gap-8 mb-12">
+      <section className="mb-12">
+        <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-5">Visão operacional</h2>
+        <div className="grid sm:grid-cols-2 gap-8">
         <div>
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Distribuição por status
+            Status dos processos
           </h2>
           <div className="h-64 border border-ink/10 rounded-xl p-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -265,7 +295,7 @@ export default function Dashboard() {
 
         <div>
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Dias até o prazo vencer
+            Prazos críticos
           </h2>
           <div className="h-64 border border-ink/10 rounded-xl p-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -300,14 +330,15 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </section>
 
-      {urgentesProximos.length > 0 && (
-        <div className="mb-12">
+      {atencao.length > 0 && (
+        <section className="mb-12">
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Vencendo em até 7 dias
+            Atenção necessária
           </h2>
           <div className="border border-ink/10 rounded-xl divide-y divide-ink/10 overflow-hidden">
-            {urgentesProximos.map((p) => (
+            {atencao.map((p) => (
               <Link
                 key={p.id}
                 href={`/processos/${p.id}`}
@@ -327,20 +358,20 @@ export default function Dashboard() {
                       (p.dias ?? 0) <= 2 ? "text-accent font-medium" : "text-ink/50"
                     }`}
                   >
-                    {p.dias === 0 ? "vence hoje" : `${p.dias} dias`}
+                    {(p.dias ?? 0) < 0 ? `${Math.abs(p.dias ?? 0)} dias atrasado` : p.dias === 0 ? "vence hoje" : `${p.dias} dias`}
                   </span>
                   <StatusBadge status={p.status} />
                 </div>
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div>
+      <section>
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40">
-            Analisados recentemente
+            Processos recentes
           </h2>
           <Link
             href="/processos"
@@ -350,29 +381,37 @@ export default function Dashboard() {
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-        <div className="border border-ink/10 bg-paper/70 rounded-2xl divide-y divide-ink/10 overflow-hidden">
+        <div className="border border-ink/10 bg-paper/70 rounded-2xl overflow-x-auto">
+          <table className="w-full min-w-[620px] text-left">
+            <thead className="border-b border-ink/10 bg-ink/[0.03]">
+              <tr className="font-mono text-[10px] uppercase tracking-widest text-ink/40">
+                <th className="px-4 sm:px-5 py-3 font-normal">Processo</th>
+                <th className="px-4 py-3 font-normal">Tipo de ação</th>
+                <th className="px-4 py-3 font-normal">Data</th>
+                <th className="px-4 sm:px-5 py-3 font-normal">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/10">
           {recentes.map((p) => (
-            <Link
+            <tr
               key={p.id}
-              href={`/processos/${p.id}`}
-              className="flex items-center justify-between gap-4 px-4 sm:px-5 py-4 hover:bg-white/40 transition-colors"
+              className="hover:bg-white/40 transition-colors"
             >
-              <div className="min-w-0">
-                <p className="font-medium truncate">{p.partes ?? p.nomeArquivo}</p>
-                <p className="text-xs text-ink/45 truncate mt-0.5">
-                  {p.tipoAcao ?? "Tipo de ação não identificado"}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="hidden sm:inline font-mono text-[11px] text-ink/40">
+              <td className="px-4 sm:px-5 py-4">
+                <Link href={`/processos/${p.id}`} className="font-medium hover:text-accent">{p.partes ?? p.nomeArquivo}</Link>
+                <p className="text-xs text-ink/45 truncate mt-0.5">{p.numeroProcesso ?? "Número não identificado"}</p>
+              </td>
+              <td className="px-4 py-4 text-sm text-ink/55">{p.tipoAcao ?? "Não identificado"}</td>
+              <td className="px-4 py-4 font-mono text-[11px] text-ink/40">
                   {new Date(p.criadoEm).toLocaleDateString("pt-BR")}
-                </span>
-                <StatusBadge status={p.status} />
-              </div>
-            </Link>
+              </td>
+              <td className="px-4 sm:px-5 py-4"><StatusBadge status={p.status} /></td>
+            </tr>
           ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
