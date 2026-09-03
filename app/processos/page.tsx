@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 import { FolderOpen, Search } from "lucide-react";
@@ -16,17 +16,14 @@ const FILTROS = [
   { valor: "bloqueio", label: "Bloqueio judicial" },
 ];
 
-export default function ListaProcessos() {
+function ListaProcessosConteudo() {
   const router = useRouter();
+  const parametros = useSearchParams();
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [filtro, setFiltro] = useState(() =>
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filtro") === "bloqueio"
-      ? "bloqueio"
-      : "todos"
-  );
   const [busca, setBusca] = useState("");
   const [ordenacao, setOrdenacao] = useState("recentes");
+  const filtro = parametros.get("filtro") ?? "todos";
 
   useEffect(() => {
     fetch("/api/processos")
@@ -99,7 +96,7 @@ export default function ListaProcessos() {
         {FILTROS.map((f) => (
           <button
             key={f.valor}
-            onClick={() => setFiltro(f.valor)}
+            onClick={() => router.push(f.valor === "todos" ? "/processos" : `/processos?filtro=${f.valor}`)}
             className={`font-mono text-[12px] uppercase tracking-wide px-3 py-1.5 rounded-full border transition-colors ${
               filtro === f.valor
                 ? "bg-ink text-paper border-ink"
@@ -188,5 +185,13 @@ export default function ListaProcessos() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ListaProcessos() {
+  return (
+    <Suspense fallback={<div className="max-w-5xl mx-auto px-5 sm:px-6 pt-12"><p className="text-ink/40 font-mono text-sm">Carregando…</p></div>}>
+      <ListaProcessosConteudo />
+    </Suspense>
   );
 }
