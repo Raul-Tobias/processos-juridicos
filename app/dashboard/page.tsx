@@ -142,7 +142,7 @@ export default function Dashboard() {
 
   if (carregando) {
     return (
-      <div className="max-w-5xl mx-auto px-5 sm:px-6 pt-12 sm:pt-14">
+      <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 pt-10 sm:pt-12">
         <p className="text-ink/40 font-mono text-sm">Carregando…</p>
       </div>
     );
@@ -150,7 +150,7 @@ export default function Dashboard() {
 
   if (processos.length === 0) {
     return (
-      <div className="max-w-5xl mx-auto px-5 sm:px-6 pt-12 sm:pt-14">
+      <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 pt-10 sm:pt-12">
         <h1 className="font-serif text-3xl font-semibold mb-4">Dashboard</h1>
         <p className="text-ink/50">
           Nenhum processo analisado ainda.{" "}
@@ -164,18 +164,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-5 sm:px-6 pt-12 sm:pt-14 pb-24">
+    <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 pt-8 sm:pt-10 pb-16">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent mb-2">
         Dashboard
       </p>
       <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-[-0.02em] mb-2">
         Dashboard
       </h1>
-      <p className="text-ink/50 mb-10">
+      <p className="text-ink/50 mb-7">
         Visão geral dos processos analisados.
       </p>
 
-      <section className="border border-ink/10 bg-white/35 rounded-xl p-4 mb-8">
+      <section className="border border-ink/10 bg-white/35 rounded-xl p-4 mb-7">
         <div className="flex items-center gap-2 mb-3">
           <SlidersHorizontal className="w-4 h-4 text-accent" strokeWidth={1.8} />
           <h2 className="font-mono text-xs uppercase tracking-widest text-ink/50">Filtros</h2>
@@ -221,7 +221,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="mb-12">
+      <section className="mb-9">
         <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">Indicadores</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-paper/70 px-4 py-4">
@@ -255,7 +255,7 @@ export default function Dashboard() {
       </div>
       </section>
 
-      <section className="mb-12">
+      <section className="mb-9">
         <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-5">Visão operacional</h2>
         <div className="grid lg:grid-cols-3 gap-4">
         <div>
