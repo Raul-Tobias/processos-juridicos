@@ -3,17 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
-import { AlertTriangle, ArrowUpRight, Clock3, FileCheck2, Search, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Bell, Clock3, FileCheck2, MoreVertical, Search } from "lucide-react";
 import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 
-const CORES_STATUS: Record<string, string> = {
-  em_andamento: "#1c2431",
-  urgente: "#7a2e33",
-  aguardando: "#a4823f",
-  arquivado: "#1c243133",
-};
+const CORES_STATUS: Record<string, string> = { em_andamento: "#182538", urgente: "#7f2d32", aguardando: "#b28a32", arquivado: "#a8a8a5" };
 
 const LABEL_STATUS: Record<string, string> = {
   em_andamento: "Em andamento",
@@ -139,6 +133,8 @@ export default function Dashboard() {
         .slice(0, 5),
     [processosFiltrados]
   );
+  const totalStatus = dadosStatus.reduce((total, item) => total + item.valor, 0);
+  const maiorAtraso = Math.max(...prazosCriticos.map((processo) => Math.abs(processo.dias ?? 0)), 1);
 
   if (carregando) {
     return (
@@ -164,30 +160,31 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 pt-8 sm:pt-10 pb-16">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent mb-2">
-        Dashboard
-      </p>
-      <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-[-0.02em] mb-2">
-        Dashboard
-      </h1>
-      <p className="text-ink/50 mb-7">
-        Visão geral dos processos analisados.
-      </p>
-
-      <section className="border border-ink/10 bg-white/35 rounded-xl p-4 mb-7">
-        <div className="flex items-center gap-2 mb-3">
-          <SlidersHorizontal className="w-4 h-4 text-accent" strokeWidth={1.8} />
-          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/50">Filtros</h2>
+    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 pt-7 sm:pt-9 pb-16">
+      <header className="flex items-start justify-between gap-5 mb-5">
+        <div>
+          <p className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-accent mb-1.5">Visão operacional</p>
+          <h1 className="font-serif text-3xl sm:text-[2.1rem] font-semibold leading-none">Dashboard</h1>
+          <p className="text-sm text-ink/55 mt-2">Visão geral dos processos analisados.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="flex items-center gap-4 pt-1">
+          <button aria-label="Notificações" className="relative p-2 text-ink/60 hover:text-accent transition-colors">
+            <Bell className="w-5 h-5" strokeWidth={1.7} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent border border-paper" />
+          </button>
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#eae6dc] font-serif text-sm text-ink">A</span>
+        </div>
+      </header>
+
+      <section className="border border-[#dedad0] bg-[#fbfaf6] rounded-xl p-4 mb-4 shadow-[0_2px_8px_rgba(23,32,42,0.025)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.45fr_auto] gap-3 items-end">
           <label className="text-xs text-ink/55">Período
-            <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+            <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="mt-1 w-full rounded-md border border-[#dedad0] bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
               <option value="todos">Todos</option><option value="mes">Este mês</option>
             </select>
           </label>
           <label className="text-xs text-ink/55">Status
-            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="mt-1 w-full rounded-md border border-[#dedad0] bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
               <option value="todos">Todos</option>
               <option value="em_andamento">Em andamento</option>
               <option value="urgente">Urgente</option>
@@ -196,108 +193,75 @@ export default function Dashboard() {
             </select>
           </label>
           <label className="text-xs text-ink/55">Responsável
-            <select disabled className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink/50 outline-none"><option>Todos</option></select>
+            <select disabled className="mt-1 w-full rounded-md border border-[#dedad0] bg-paper px-3 py-2 text-sm text-ink/50 outline-none"><option>Todos</option></select>
           </label>
           <label className="text-xs text-ink/55">Tipo
-            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="mt-1 w-full rounded-md border border-[#dedad0] bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
               <option value="todos">Todos</option>
               {tiposDisponiveis.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
             </select>
           </label>
-          <label className="relative text-xs text-ink/55">Buscar processo
+          <label className="relative text-xs text-ink/55">&nbsp;
             <Search className="absolute left-3 bottom-2.5 w-4 h-4 text-ink/35" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar processo" className="mt-1 w-full rounded-lg border border-ink/15 bg-paper/70 py-2 pl-9 pr-3 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-accent/50" />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar processo" className="mt-1 w-full rounded-md border border-[#dedad0] bg-paper py-2 pl-9 pr-3 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-accent/50" />
           </label>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="text-xs text-ink/55">Bloqueio judicial
-            <select value={filtroBloqueio} onChange={(e) => setFiltroBloqueio(e.target.value)} className="ml-2 rounded-lg border border-ink/15 bg-paper/70 px-3 py-2 text-sm text-ink outline-none focus:border-accent/50">
+          <label className="hidden text-xs text-ink/55">Bloqueio judicial
+            <select value={filtroBloqueio} onChange={(e) => setFiltroBloqueio(e.target.value)}>
               <option value="todos">Todos</option>
               <option value="sim">Identificado</option>
               <option value="nao">Não identificado</option>
             </select>
           </label>
-          <button onClick={() => { setFiltroPeriodo("todos"); setFiltroStatus("todos"); setFiltroBloqueio("todos"); setFiltroTipo("todos"); setBusca(""); }} className="font-mono text-[10px] uppercase tracking-wide text-accent hover:text-accent-light">Limpar filtros</button>
+          <button onClick={() => { setFiltroPeriodo("todos"); setFiltroStatus("todos"); setFiltroBloqueio("todos"); setFiltroTipo("todos"); setBusca(""); }} className="h-[38px] whitespace-nowrap rounded-md border border-accent/55 px-3 text-xs font-semibold text-accent hover:bg-accent/5">Limpar filtros</button>
         </div>
       </section>
 
-      <section className="mb-9">
-        <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">Indicadores</h2>
+      <section className="mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-paper/70 px-4 py-4">
-          <FileCheck2 className="w-5 h-5 text-ink/45 mt-0.5" />
-          <div>
-            <p className="font-serif text-2xl font-semibold">{processosAtivos}</p>
-            <p className="text-sm text-ink/55">processos ativos</p>
-          </div>
+        <div className="min-h-[124px] rounded-xl border border-[#dedad0] bg-[#fbfaf6] px-4 py-4">
+          <FileCheck2 className="w-5 h-5 text-ink/50 mb-2" />
+          <p className="font-serif text-3xl font-semibold leading-none">{processosAtivos}</p>
+          <p className="text-xs font-semibold mt-1.5">Processos ativos</p><p className="text-[10px] text-ink/55 mt-1">Total de processos em andamento</p>
         </div>
-        <div className="flex items-start gap-3 rounded-2xl border border-gold/25 bg-gold/5 px-4 py-4">
-          <Clock3 className="w-5 h-5 text-gold mt-0.5" />
-          <div>
-            <p className="font-serif text-2xl font-semibold text-gold">{prazosProximos}</p>
-            <p className="text-sm text-ink/55">prazos nos próximos 7 dias</p>
-          </div>
+        <div className="min-h-[124px] rounded-xl border border-accent/45 bg-[#fbfaf6] px-4 py-4">
+          <AlertTriangle className="w-5 h-5 text-accent mb-2" />
+          <p className="font-serif text-3xl font-semibold leading-none text-accent">{prazosVencidos}</p>
+          <p className="text-xs font-semibold mt-1.5">Prazos vencidos</p><p className="text-[10px] text-ink/55 mt-1">Requer atenção imediata</p>
+          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-accent">Ver processos <ArrowRight className="w-3 h-3" /></Link>
         </div>
-        <div className="flex items-start gap-3 rounded-2xl border border-accent/25 bg-accent/5 px-4 py-4">
-          <AlertTriangle className="w-5 h-5 text-accent mt-0.5" />
-          <div>
-            <p className="font-serif text-2xl font-semibold text-accent">{prazosVencidos}</p>
-            <p className="text-sm text-ink/55">prazos que exigem atenção</p>
-          </div>
+        <div className="min-h-[124px] rounded-xl border border-gold/45 bg-[#fbfaf6] px-4 py-4">
+          <Clock3 className="w-5 h-5 text-gold mb-2" />
+          <p className="font-serif text-3xl font-semibold leading-none text-gold">{prazosProximos}</p>
+          <p className="text-xs font-semibold mt-1.5">Prazos próximos (7 dias)</p><p className="text-[10px] text-ink/55 mt-1">Acompanhe os próximos prazos</p>
+          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-gold">Ver prazos <ArrowRight className="w-3 h-3" /></Link>
         </div>
-        <div className="flex items-start gap-3 rounded-2xl border border-accent/25 bg-accent/5 px-4 py-4">
-          <AlertTriangle className="w-5 h-5 text-accent mt-0.5" />
-          <div>
-            <p className="font-serif text-2xl font-semibold text-accent">{atencao.length}</p>
-            <p className="text-sm text-ink/55">exigem atenção</p>
-          </div>
+        <div className="min-h-[124px] rounded-xl border border-[#d77b55]/50 bg-[#fbfaf6] px-4 py-4">
+          <AlertTriangle className="w-5 h-5 text-[#b94c26] mb-2" />
+          <p className="font-serif text-3xl font-semibold leading-none text-[#b94c26]">{atencao.length}</p>
+          <p className="text-xs font-semibold mt-1.5">Exigem atenção</p><p className="text-[10px] text-ink/55 mt-1">Processos que precisam de acompanhamento</p>
+          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-[#b94c26]">Ver processos <ArrowRight className="w-3 h-3" /></Link>
         </div>
       </div>
       </section>
 
-      <section className="mb-9">
-        <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-5">Visão operacional</h2>
-        <div className="grid lg:grid-cols-3 gap-4">
-        <div>
-          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Status dos processos
-          </h2>
-          <div className="h-64 border border-ink/10 rounded-xl p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosStatus} layout="vertical" margin={{ left: 8, right: 12 }}>
-                <XAxis type="number" allowDecimals={false} fontSize={11} stroke="#1c243155" />
-                <YAxis
-                  type="category"
-                  dataKey="status"
-                  width={90}
-                  fontSize={11}
-                  stroke="#1c243155"
-                  tickFormatter={(status) => LABEL_STATUS[status]}
-                />
-                <Tooltip
-                  formatter={(valor) => [valor, "Processos"]}
-                  contentStyle={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 13,
-                    borderRadius: 8,
-                    border: "1px solid #1c243120",
-                  }}
-                />
-                <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
-                  {dadosStatus.map((d) => (
-                    <Cell key={d.status} fill={CORES_STATUS[d.status]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      <section className="mb-4 grid lg:grid-cols-[1.05fr_1.35fr_.9fr] gap-3">
+        <div className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-4">
+          <h2 className="text-[10px] font-bold uppercase tracking-wide">Status dos processos</h2>
+          <div className="mt-5 space-y-4">
+            {dadosStatus.map((item) => {
+              const percentual = totalStatus ? (item.valor / totalStatus) * 100 : 0;
+              return <div key={item.status} className="grid grid-cols-[64px_1fr_auto] items-center gap-2 text-[10px]">
+                <span className="text-ink/65">{LABEL_STATUS[item.status]}</span>
+                <span className="h-3 rounded-sm bg-[#eeeae1] overflow-hidden"><span className="block h-full rounded-sm" style={{ width: `${percentual}%`, backgroundColor: CORES_STATUS[item.status] }} /></span>
+                <span className="whitespace-nowrap text-ink/65">{item.valor} ({percentual.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)</span>
+              </div>;
+            })}
           </div>
+          <div className="border-t border-[#dedad0] mt-5 pt-3 flex justify-between text-[11px] font-semibold"><span>Total</span><span>{totalStatus}</span></div>
         </div>
-
-        <div>
-          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Prazos mais críticos
-          </h2>
-          <div className="border border-ink/10 rounded-xl divide-y divide-ink/10 overflow-hidden">
+        <div className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-4">
+          <div className="flex justify-between gap-3"><h2 className="text-[10px] font-bold uppercase tracking-wide">Prazos mais críticos</h2><span className="text-[9px] font-bold uppercase tracking-wide text-ink/50">Dias atrasados</span></div>
+          <div className="mt-4 divide-y divide-[#e6e1d7]">
             {prazosCriticos.length === 0 ? (
               <p className="px-4 py-8 text-sm text-ink/45">Nenhum prazo vencido.</p>
             ) : (
@@ -305,98 +269,70 @@ export default function Dashboard() {
                 <Link
                   key={p.id}
                   href={`/processos/${p.id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-ink/[0.03] transition-colors"
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(70px,.75fr)_28px] items-center gap-3 py-2.5 hover:bg-ink/[0.03] transition-colors"
                 >
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">
-                      {p.numeroProcesso ?? p.partes ?? p.nomeArquivo}
-                    </p>
-                    <p className="text-xs text-ink/45 truncate mt-0.5">
-                      {p.partes ?? "Processo sem partes identificadas"}
-                    </p>
-                  </div>
-                  <span className="flex items-center gap-1.5 shrink-0 font-mono text-xs text-accent font-medium">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    {Math.abs(p.dias ?? 0)} dias atrasado
-                  </span>
+                  <p className="text-[11px] font-medium truncate">{p.numeroProcesso ?? p.partes ?? p.nomeArquivo}</p>
+                  <span className="h-2 rounded-sm bg-[#eeeae1] overflow-hidden"><span className="block h-full rounded-sm bg-accent" style={{ width: `${(Math.abs(p.dias ?? 0) / maiorAtraso) * 100}%` }} /></span>
+                  <span className="text-[10px] font-semibold text-accent text-right">{Math.abs(p.dias ?? 0)}</span>
                 </Link>
               ))
             )}
           </div>
         </div>
-        <div>
-          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-4">
-            Atenção necessária
-          </h2>
-          <div className="border border-ink/10 rounded-xl divide-y divide-ink/10 overflow-hidden">
-            <Link href="/processos?filtro=urgente" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
-              <div>
-                <p className="font-medium text-sm">Processos urgentes</p>
-                <p className="text-xs text-ink/45 mt-1">Requerem prioridade máxima</p>
-              </div>
-              <span className="font-serif text-2xl text-ink/65">{processosFiltrados.filter((p) => p.status === "urgente").length}</span>
-            </Link>
-            <Link href="/dashboard" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
-              <div>
-                <p className="font-medium text-sm">Processos com prazo vencido</p>
-                <p className="text-xs text-ink/45 mt-1">Requerem atenção imediata</p>
-              </div>
-              <span className="font-serif text-2xl text-accent">{prazosVencidos}</span>
-            </Link>
-            <Link href="/dashboard" className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-ink/[0.03] transition-colors">
-              <div>
-                <p className="font-medium text-sm">Prazos nos próximos 7 dias</p>
-                <p className="text-xs text-ink/45 mt-1">Acompanhe os próximos prazos</p>
-              </div>
-              <span className="font-serif text-2xl text-gold">{prazosProximos}</span>
-            </Link>
+        <div className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-3">
+          <h2 className="px-1 text-[10px] font-bold uppercase tracking-wide">Atenção necessária</h2>
+          <div className="mt-3 space-y-2">
+            <Link href="/dashboard" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-accent">{prazosVencidos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo vencido</p><p className="text-[9px] text-ink/55 mt-0.5">Requer atenção imediata</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-accent">Ver processos <ArrowRight className="w-3 h-3" /></span></Link>
+            <Link href="/dashboard" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-gold">{prazosProximos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo nos próximos 7 dias</p><p className="text-[9px] text-ink/55 mt-0.5">Acompanhe os próximos prazos</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-gold">Ver prazos <ArrowRight className="w-3 h-3" /></span></Link>
+            <Link href="/processos?filtro=urgente" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-[#182538]">{processosFiltrados.filter((p) => p.status === "urgente").length}</p><p className="text-[10px] font-semibold mt-1">Processos urgentes</p><p className="text-[9px] text-ink/55 mt-0.5">Requerem prioridade máxima</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-[#182538]">Ver processos <ArrowRight className="w-3 h-3" /></span></Link>
           </div>
         </div>
-      </div>
       </section>
 
-      <section>
+      <section className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-3 sm:p-4">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40">
+          <h2 className="text-[10px] font-bold uppercase tracking-wide">
             Processos recentes
           </h2>
           <Link
             href="/processos"
-            className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-light"
+            className="inline-flex items-center gap-1 text-[10px] font-semibold text-accent hover:text-accent-light"
           >
             Ver todos
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-        <div className="border border-ink/10 bg-paper/70 rounded-2xl overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left">
-            <thead className="border-b border-ink/10 bg-ink/[0.03]">
-              <tr className="font-mono text-[10px] uppercase tracking-widest text-ink/40">
+        <div className="border border-[#dedad0] rounded-lg overflow-x-auto mt-3">
+          <table className="w-full min-w-[780px] text-left">
+            <thead className="border-b border-[#dedad0] bg-paper">
+              <tr className="text-[9px] font-bold uppercase tracking-wide text-ink/50">
                 <th className="px-4 sm:px-5 py-3 font-normal">Processo</th>
-                <th className="px-4 py-3 font-normal">Tipo de ação</th>
+                <th className="px-4 py-3 font-normal">Tipo</th>
+                <th className="px-4 py-3 font-normal">Status</th>
                 <th className="px-4 py-3 font-normal">Prazo</th>
                 <th className="px-4 py-3 font-normal">Responsável</th>
-                <th className="px-4 py-3 font-normal">Atualização</th>
-                <th className="px-4 sm:px-5 py-3 font-normal">Status</th>
+                <th className="px-4 py-3 font-normal">Última atualização</th>
+                <th className="px-4 sm:px-5 py-3 font-normal">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/10">
           {recentes.map((p) => (
             <tr
               key={p.id}
-              className="hover:bg-white/40 transition-colors"
+              className="hover:bg-paper/60 transition-colors"
             >
               <td className="px-4 sm:px-5 py-4">
                 <Link href={`/processos/${p.id}`} className="font-medium hover:text-accent">{p.partes ?? p.nomeArquivo}</Link>
                 <p className="text-xs text-ink/45 truncate mt-0.5">{p.numeroProcesso ?? "Número não identificado"}</p>
               </td>
-              <td className="px-4 py-4 text-sm text-ink/55">{p.tipoAcao ?? "Não identificado"}</td>
-              <td className={`px-4 py-4 font-mono text-[11px] ${p.prazoVencimento && diasAteVencimento(p.prazoVencimento)! < 0 ? "text-accent" : "text-ink/40"}`}>
+              <td className="px-4 py-4 text-[11px] text-ink/55">{p.tipoAcao ?? "Não identificado"}</td>
+              <td className="px-4 py-4"><StatusBadge status={p.status} /></td>
+              <td className={`px-4 py-4 text-[10px] font-semibold ${p.prazoVencimento && diasAteVencimento(p.prazoVencimento)! < 0 ? "text-accent" : "text-ink/40"}`}>
                 {p.prazoVencimento ?? "-"}
               </td>
-              <td className="px-4 py-4 text-sm text-ink/40">-</td>
-              <td className="px-4 py-4 font-mono text-[11px] text-ink/40">{new Date(p.criadoEm).toLocaleDateString("pt-BR")}</td>
-              <td className="px-4 sm:px-5 py-4"><StatusBadge status={p.status} /></td>
+              <td className="px-4 py-4 text-[11px] text-ink/40">-</td>
+              <td className="px-4 py-4 text-[10px] text-ink/40">{new Date(p.criadoEm).toLocaleDateString("pt-BR")}</td>
+              <td className="px-4 sm:px-5 py-4"><Link href={`/processos/${p.id}`} className="inline-flex items-center gap-2 rounded-md border border-[#dedad0] px-2.5 py-1 text-[10px] font-semibold hover:border-accent hover:text-accent">Ver</Link><MoreVertical className="inline-block ml-2 w-4 h-4 text-ink/50 align-middle" /></td>
             </tr>
           ))}
             </tbody>
