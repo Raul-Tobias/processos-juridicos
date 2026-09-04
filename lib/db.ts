@@ -1,6 +1,13 @@
 import postgres from "postgres";
 import type { BloqueioJudicial } from "@/lib/analisarComIA";
 
+export type Pedido = {
+  descricao: string;
+  valor: number;
+  tipo: "fechado" | "minimo" | "a_apurar";
+  destaque: boolean;
+};
+
 export const sql = postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/autos", {
   prepare: false,
   max: 5,
@@ -13,6 +20,7 @@ export interface Processo {
   varaComarca: string | null;
   tipoAcao: string | null;
   valorCausa: string | null;
+  pedidos?: Pedido[];
   objetoCausa: string | null;
   status: string;
   prazoVencimento: string | null;

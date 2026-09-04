@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Processo } from "@/lib/db";
+import { Processo, Pedido } from "@/lib/db";
 import type { BloqueioJudicial } from "@/lib/analisarComIA";
 import StatusBadge from "@/components/StatusBadge";
 import {
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 const CAMPOS: {
-  chave: Exclude<keyof Processo, "bloqueioJudicial" | "observacoes">;
+  chave: Exclude<keyof Processo, "bloqueioJudicial" | "observacoes" | "pedidos">;
   label: string;
 }[] = [
   { chave: "numeroProcesso", label: "Número do processo" },
@@ -248,6 +248,8 @@ export default function DetalheProcesso() {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
+          <DosPedidosCard pedidos={processo.pedidos ?? []} valorCausa={processo.valorCausa} />
+
           <section className="border border-[#d9cbbd] border-t-[3px] border-t-[#a4823f] rounded-lg bg-[#fffdf9] overflow-hidden shadow-[0_5px_20px_#5f473008]">
             <div className="px-5 py-5 border-b border-[#ebe3d9]">
               <h2 className="font-serif text-[21px] font-semibold">Bloqueio judicial</h2>
@@ -412,6 +414,76 @@ function ResumoItem({ label, value, children }: { label: string; value?: string 
     <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink/45 mb-2">{label}</p>
     {children ?? <p className={`text-[13px] leading-5 font-medium ${value ? "text-ink/80" : "text-ink/35 font-normal"}`}>{value ?? "Não identificado"}</p>}
   </div>;
+}
+
+function DosPedidosCard({ pedidos, valorCausa }: { pedidos: Pedido[]; valorCausa: string | null }) {
+  const [expandido, setExpandido] = useState(false);
+  const pedidosOrdenados = [...pedidos].sort((a, b) => b.valor - a.valor);
+  const pedidosVisiveis = expandido ? pedidosOrdenados : pedidosOrdenados.slice(0, 4);
+  const totalVerbas = pedidos
+    .filter(({ descricao }) => !descricao.toLocaleLowerCase().includes("dano moral"))
+    .reduce((total, pedido) => total + pedido.valor, 0);
+  const totalCausa = interpretarValorBRL(valorCausa);
+
+  return (
+    <section className="border border-[#e3ded6] rounded-lg bg-white shadow-[0_5px_20px_#5f473008] overflow-hidden">
+      <div className="px-5 py-5 border-b border-[#eee9e4]">
+        <h2 className="font-serif text-[21px] font-semibold text-ink">Dos pedidos</h2>
+        <p className="text-xs leading-5 text-ink/55 mt-1">Verbas identificadas na petição</p>
+      </div>
+
+      {pedidosVisiveis.length > 0 ? (
+        <div className="px-5 py-2 divide-y divide-[#eee9e4]">
+          {pedidosVisiveis.map((pedido, index) => (
+            <div key={`${pedido.descricao}-${index}`} className="flex items-baseline justify-between gap-4 py-3">
+              <span
+                className="min-w-0 flex-1 truncate text-[clamp(11px,2.5vw,13px)] leading-5 text-ink/75"
+                title={pedido.descricao}
+              >
+                {pedido.descricao}
+              </span>
+              <span className={`shrink-0 text-right text-[13px] font-semibold ${pedido.destaque ? "text-[#b94c26]" : "text-ink/80"}`}>
+                {formatarBRL(pedido.valor)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="px-5 py-6 text-sm text-ink/45">Nenhum pedido identificado.</p>
+      )}
+
+      {pedidos.length > 4 && (
+        <button
+          type="button"
+          onClick={() => setExpandido(!expandido)}
+          className="mx-5 mb-4 text-xs font-semibold text-accent hover:text-accent-light transition-colors"
+        >
+          {expandido ? "Recolher pedidos" : "Ver todos os pedidos"}
+        </button>
+      )}
+
+      <dl className="border-t border-[#eee9e4] px-5">
+        <div className="flex items-baseline justify-between gap-4 py-3">
+          <dt className="text-xs text-ink/55">Total das verbas</dt>
+          <dd className="shrink-0 text-sm font-semibold text-ink/85">{formatarBRL(totalVerbas)}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-4 border-t border-[#eee9e4] py-3">
+          <dt className="text-xs font-semibold text-ink/65">Valor total da causa</dt>
+          <dd className="shrink-0 text-sm font-semibold text-ink">{formatarBRL(totalCausa)}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function formatarBRL(valor: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
+}
+
+function interpretarValorBRL(valor: string | null) {
+  if (!valor) return 0;
+  const numero = Number(valor.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(numero) ? numero : 0;
 }
 
 function rotuloIdentificacao(valor: BloqueioJudicial["identificado"]) {
