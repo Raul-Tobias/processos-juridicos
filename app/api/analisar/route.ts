@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { extrairTextoDoPdf } from "@/lib/extrairTexto";
-import { analisarPdfComIA } from "@/lib/analisarComIA";
+import { analisarPdfComIA, extrairPedidosDoTexto } from "@/lib/analisarComIA";
 import { inserirProcesso } from "@/lib/db";
 import { COOKIE_SESSAO, usuarioDaSessao } from "@/lib/auth";
 
@@ -66,18 +66,20 @@ export async function POST(req: NextRequest) {
         ? await analisarPdfComIA(buffer, texto)
         : await analisarPdfComIA(buffer);
 
+    const pedidos = analise.pedidos?.length ? analise.pedidos : extrairPedidosDoTexto(texto);
+    const analiseFinal = { ...analise, pedidos };
     const camposIdentificados = [
-      analise.numeroProcesso,
-      analise.partes,
-      analise.varaComarca,
-      analise.tipoAcao,
-      analise.valorCausa,
-      analise.objetoCausa,
-      analise.pedidos?.length ? analise.pedidos : null,
-      analise.prazoVencimento,
-      analise.andamentoAtual,
-      analise.resumo,
-      analise.bloqueioJudicial,
+      analiseFinal.numeroProcesso,
+      analiseFinal.partes,
+      analiseFinal.varaComarca,
+      analiseFinal.tipoAcao,
+      analiseFinal.valorCausa,
+      analiseFinal.objetoCausa,
+      analiseFinal.pedidos.length ? analiseFinal.pedidos : null,
+      analiseFinal.prazoVencimento,
+      analiseFinal.andamentoAtual,
+      analiseFinal.resumo,
+      analiseFinal.bloqueioJudicial,
     ].filter(Boolean).length;
     console.info("Campos identificados pela IA:", camposIdentificados);
 
@@ -93,23 +95,23 @@ export async function POST(req: NextRequest) {
 
     await inserirProcesso({
       id,
-      numeroProcesso: analise.numeroProcesso,
-      partes: analise.partes,
-      varaComarca: analise.varaComarca,
-      tipoAcao: analise.tipoAcao,
-      valorCausa: analise.valorCausa,
-      objetoCausa: analise.objetoCausa,
-      pedidos: analise.pedidos,
-      status: analise.status ?? "em_andamento",
-      prazoVencimento: analise.prazoVencimento,
-      andamentoAtual: analise.andamentoAtual,
-      resumo: analise.resumo,
-      bloqueioJudicial: analise.bloqueioJudicial,
+      numeroProcesso: analiseFinal.numeroProcesso,
+      partes: analiseFinal.partes,
+      varaComarca: analiseFinal.varaComarca,
+      tipoAcao: analiseFinal.tipoAcao,
+      valorCausa: analiseFinal.valorCausa,
+      objetoCausa: analiseFinal.objetoCausa,
+      pedidos: analiseFinal.pedidos,
+      status: analiseFinal.status ?? "em_andamento",
+      prazoVencimento: analiseFinal.prazoVencimento,
+      andamentoAtual: analiseFinal.andamentoAtual,
+      resumo: analiseFinal.resumo,
+      bloqueioJudicial: analiseFinal.bloqueioJudicial,
       nomeArquivo: arquivo.name,
       criadoEm,
     });
 
-    return NextResponse.json({ id, ...analise });
+    return NextResponse.json({ id, ...analiseFinal });
   } catch (erro) {
     console.error("Erro ao analisar processo:", erro);
     const mensagem = erro instanceof Error ? erro.message : "";

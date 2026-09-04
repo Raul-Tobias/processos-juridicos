@@ -26,6 +26,42 @@ export interface Pedido {
   destaque: boolean;
 }
 
+export function extrairPedidosDoTexto(texto: string): Pedido[] {
+  const inicio = texto.search(/(?:^|\n)\s*(?:\d+\s*[\)\.-]?\s*)?DOS\s+PEDIDOS\b/i);
+  if (inicio < 0) return [];
+
+  const depoisDoTitulo = texto.slice(inicio);
+  const fim = depoisDoTitulo.search(/\n\s*(?:\d+\s*[\)\.-]?\s*)?DOS\s+(?:REQUERIMENTOS|HONOR[AÁ]RIOS|VALOR\s+DA\s+CAUSA)\b/i);
+  const secao = depoisDoTitulo.slice(0, fim > 0 ? fim : undefined);
+  const marcadores = [...secao.matchAll(/(?:^|\n)\s*([a-z])\s*[\.)]\s+/gi)];
+  const pedidos: Pedido[] = [];
+
+  for (let indice = 0; indice < marcadores.length; indice += 1) {
+    const marcador = marcadores[indice];
+    const proximo = marcadores[indice + 1];
+    const trecho = secao.slice(marcador.index! + marcador[0].length, proximo?.index ?? secao.length)
+      .replace(/\s+/g, " ")
+      .replace(/\bDocumento assinado eletronicamente.*?Fls\.?\s*:\s*\d+/gi, "")
+      .trim();
+    if (!trecho || /^total\s+das\s+verbas/i.test(trecho)) continue;
+
+    const valorEncontrado = trecho.match(/R\$\s*([\d.]+(?:,\d{1,2})?)/i);
+    const valor = valorEncontrado
+      ? Number(valorEncontrado[1].replace(/\./g, "").replace(",", "."))
+      : 0;
+    const minimo = /n[aã]o\s+inferior|no\s+m[ií]nimo|m[ií]nimo\s+de/i.test(trecho);
+    const descricao = trecho.replace(/\s*[-–—]?\s*R\$\s*[\d.]+(?:,\d{1,2})?/gi, "").trim();
+    pedidos.push({
+      descricao: descricao.slice(0, 280),
+      valor: Number.isFinite(valor) ? valor : 0,
+      tipo: valor > 0 ? (minimo ? "minimo" : "fechado") : "a_apurar",
+      destaque: valor > 0 || /dano\s+moral|indeniza[cç][aã]o|estabilidade/i.test(descricao),
+    });
+  }
+
+  return pedidos;
+}
+
 export interface BloqueioJudicial {
   identificado: "sim" | "nao" | "nao_identificado";
   valor: string | null;
