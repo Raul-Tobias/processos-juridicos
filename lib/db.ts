@@ -13,6 +13,7 @@ export interface Processo {
   varaComarca: string | null;
   tipoAcao: string | null;
   valorCausa: string | null;
+  objetoCausa: string | null;
   status: string;
   prazoVencimento: string | null;
   andamentoAtual: string | null;
@@ -76,6 +77,7 @@ export async function inicializarBanco() {
       vara_comarca TEXT,
       tipo_acao TEXT,
       valor_causa TEXT,
+      objeto_causa TEXT,
       status TEXT NOT NULL DEFAULT 'em_andamento',
       prazo_vencimento TEXT,
       andamento_atual TEXT,
@@ -86,6 +88,7 @@ export async function inicializarBanco() {
       criado_em TIMESTAMPTZ NOT NULL
     )
   `;
+  await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS objeto_causa TEXT`;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB`;
   await sql`
     CREATE TABLE IF NOT EXISTS usuarios (
@@ -147,6 +150,7 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
     varaComarca: linha.vara_comarca as string | null,
     tipoAcao: linha.tipo_acao as string | null,
     valorCausa: linha.valor_causa as string | null,
+    objetoCausa: linha.objeto_causa as string | null,
     status: String(linha.status),
     prazoVencimento: linha.prazo_vencimento as string | null,
     andamentoAtual: linha.andamento_atual as string | null,
@@ -183,6 +187,7 @@ export async function atualizarDadosProcesso(id: string, dados: Partial<Pick<Pro
     varaComarca: "vara_comarca",
     tipoAcao: "tipo_acao",
     valorCausa: "valor_causa",
+    objetoCausa: "objeto_causa",
     prazoVencimento: "prazo_vencimento",
     andamentoAtual: "andamento_atual",
     resumo: "resumo",

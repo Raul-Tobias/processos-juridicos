@@ -25,6 +25,7 @@ const CAMPOS: {
   { chave: "varaComarca", label: "Vara / Comarca" },
   { chave: "tipoAcao", label: "Tipo de ação" },
   { chave: "valorCausa", label: "Valor da causa" },
+  { chave: "objetoCausa", label: "Objeto da causa" },
   { chave: "prazoVencimento", label: "Próximo prazo" },
   { chave: "andamentoAtual", label: "Andamento atual" },
 ];
@@ -192,11 +193,12 @@ export default function DetalheProcesso() {
         </p>
       </header>
 
-      <section aria-label="Resumo do processo" className="grid grid-cols-1 min-[540px]:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+      <section aria-label="Resumo do processo" className="grid grid-cols-1 min-[540px]:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
         <ResumoItem label="Status"><StatusBadge status={processo.status} /></ResumoItem>
         <ResumoItem label="Próximo prazo" value={processo.prazoVencimento} />
         <ResumoItem label="Tipo de ação" value={processo.tipoAcao} />
         <ResumoItem label="Valor da causa" value={processo.valorCausa} />
+        <ResumoItem label="Objeto da causa" value={processo.objetoCausa} />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7">
@@ -217,7 +219,7 @@ export default function DetalheProcesso() {
                 {CAMPOS.map(({ chave, label }) => (
                   <label key={chave} className="grid grid-cols-1 sm:grid-cols-[150px_1fr] gap-2 sm:gap-5 px-5 sm:px-7 py-4">
                     <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45 sm:pt-2.5">{label}</span>
-                    <input value={formulario[chave] ?? ""} onChange={(e) => setFormulario({ ...formulario, [chave]: e.target.value })} type={chave === "prazoVencimento" ? "date" : "text"} className="rounded-md border border-[#dcd5cd] bg-[#fdfcfa] px-3 py-2 text-sm text-ink outline-none focus:border-accent/50" />
+                    {chave === "objetoCausa" ? <textarea value={formulario[chave] ?? ""} onChange={(e) => setFormulario({ ...formulario, [chave]: e.target.value })} rows={3} className="rounded-md border border-[#dcd5cd] bg-[#fdfcfa] px-3 py-2 text-sm text-ink outline-none focus:border-accent/50 resize-y" /> : <input value={formulario[chave] ?? ""} onChange={(e) => setFormulario({ ...formulario, [chave]: e.target.value })} type={chave === "prazoVencimento" ? "date" : "text"} className="rounded-md border border-[#dcd5cd] bg-[#fdfcfa] px-3 py-2 text-sm text-ink outline-none focus:border-accent/50" />}
                   </label>
                 ))}
                 <label className="grid grid-cols-1 sm:grid-cols-[150px_1fr] gap-2 sm:gap-5 px-5 sm:px-7 py-4">

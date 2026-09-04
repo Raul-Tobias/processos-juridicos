@@ -66,6 +66,7 @@ export async function PATCH(
     "varaComarca",
     "tipoAcao",
     "valorCausa",
+    "objetoCausa",
     "prazoVencimento",
     "andamentoAtual",
     "resumo",

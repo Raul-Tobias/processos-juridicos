@@ -14,11 +14,12 @@ async function main() {
     await tx.unsafe(`
       CREATE TABLE IF NOT EXISTS processos (
         id TEXT PRIMARY KEY, numero_processo TEXT, partes TEXT, vara_comarca TEXT,
-        tipo_acao TEXT, valor_causa TEXT, status TEXT NOT NULL DEFAULT 'em_andamento',
+        tipo_acao TEXT, valor_causa TEXT, objeto_causa TEXT, status TEXT NOT NULL DEFAULT 'em_andamento',
         prazo_vencimento TEXT, andamento_atual TEXT, resumo TEXT, observacoes TEXT,
         bloqueio_judicial JSONB,
         nome_arquivo TEXT, criado_em TIMESTAMPTZ NOT NULL
       );
+      ALTER TABLE processos ADD COLUMN IF NOT EXISTS objeto_causa TEXT;
       ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB;
       CREATE TABLE IF NOT EXISTS usuarios (
         id TEXT PRIMARY KEY, nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
@@ -40,6 +41,7 @@ async function main() {
         status: p.status, prazo_vencimento: p.prazoVencimento,
         andamento_atual: p.andamentoAtual, resumo: p.resumo,
         observacoes: p.observacoes ?? null, nome_arquivo: p.nomeArquivo,
+        objeto_causa: p.objetoCausa ?? null,
         bloqueio_judicial: p.bloqueioJudicial ? JSON.parse(p.bloqueioJudicial) : null,
         criado_em: p.criadoEm,
       })} ON CONFLICT (id) DO NOTHING`;

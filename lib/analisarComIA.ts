@@ -10,6 +10,7 @@ export interface AnaliseProcesso {
   varaComarca: string | null;
   tipoAcao: string | null;
   valorCausa: string | null;
+  objetoCausa: string | null;
   status: "em_andamento" | "urgente" | "aguardando" | "arquivado";
   prazoVencimento: string | null; // formato YYYY-MM-DD ou null
   andamentoAtual: string | null;
@@ -39,6 +40,7 @@ Você receberá o texto extraído de um documento de processo judicial e deve re
   "varaComarca": string ou null,
   "tipoAcao": string ou null,
   "valorCausa": string ou null (ex: "R$ 15.000,00"),
+  "objetoCausa": string ou null (síntese objetiva do que é pedido na ação e do direito ou bem discutido),
   "status": um de "em_andamento" | "urgente" | "aguardando" | "arquivado",
   "prazoVencimento": string no formato YYYY-MM-DD ou null (próximo prazo relevante, se houver),
   "andamentoAtual": string ou null (breve descrição do último andamento),
@@ -117,7 +119,7 @@ export async function analisarPdfComIA(
             type: "text",
             text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}
 
-Leia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.
+Leia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, objeto da causa, valor da causa, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.
 
 Transcrição auxiliar produzida por OCR. Use-a para conferir números e nomes, mas sempre valide contra a imagem do PDF:
 ${textoOcr.slice(0, 50000)}`,
