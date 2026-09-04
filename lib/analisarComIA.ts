@@ -11,11 +11,19 @@ export interface AnaliseProcesso {
   tipoAcao: string | null;
   valorCausa: string | null;
   objetoCausa: string | null;
+  pedidos: Pedido[];
   status: "em_andamento" | "urgente" | "aguardando" | "arquivado";
   prazoVencimento: string | null; // formato YYYY-MM-DD ou null
   andamentoAtual: string | null;
   resumo: string | null;
   bloqueioJudicial: BloqueioJudicial | null;
+}
+
+export interface Pedido {
+  descricao: string;
+  valor: number;
+  tipo: "fechado" | "minimo" | "a_apurar";
+  destaque: boolean;
 }
 
 export interface BloqueioJudicial {
@@ -41,6 +49,13 @@ Você receberá o texto extraído de um documento de processo judicial e deve re
   "tipoAcao": string ou null,
   "valorCausa": string ou null (ex: "R$ 15.000,00"),
   "objetoCausa": string ou null (síntese objetiva do que é pedido na ação e do direito ou bem discutido),
+  "pedidos": array de objetos com todos os pedidos e verbas identificados na seção "DOS PEDIDOS" ou equivalente, em ordem de aparição, cada um com:
+    {
+      "descricao": string curta e específica do pedido,
+      "valor": número em reais sem símbolo ou separador de milhar (0 quando não houver valor informado),
+      "tipo": "fechado" quando houver valor definido, "minimo" quando o texto disser "não inferior a" ou equivalente, "a_apurar" quando depender de liquidação ou não tiver valor,
+      "destaque": boolean (true para dano moral, pedidos de maior valor ou verbas expressamente quantificadas)
+    },
   "status": um de "em_andamento" | "urgente" | "aguardando" | "arquivado",
   "prazoVencimento": string no formato YYYY-MM-DD ou null (próximo prazo relevante, se houver),
   "andamentoAtual": string ou null (breve descrição do último andamento),
@@ -59,6 +74,7 @@ Você receberá o texto extraído de um documento de processo judicial e deve re
     }
 }
 
+Extraia também pedidos descritos por letras (a., b., c. etc.) e os itens do bloco "Das verbas", mesmo quando aparecem em páginas seguintes. Não descarte pedidos sem valor: use valor 0 e tipo "a_apurar". Converta valores como "R$ 4.025,93" para 4025.93. Evite duplicar um pedido geral e sua verba detalhada, mas mantenha as verbas detalhadas quando trouxerem valores individuais.
 Use "urgente" quando houver prazo em até 5 dias corridos a partir de hoje ou termos como "urgente", "liminar".
 Se não conseguir identificar um campo com confiança, retorne null para ele. Nunca invente números de processo ou datas.`;
 
@@ -69,7 +85,7 @@ export async function analisarProcessoComIA(
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1536,
+    max_tokens: 3072,
     system: PROMPT_SISTEMA,
     messages: [
       {
@@ -99,7 +115,7 @@ export async function analisarPdfComIA(
 ): Promise<AnaliseProcesso> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 1536,
+    max_tokens: 3072,
     system: `${PROMPT_SISTEMA}
 
   Este é um PDF escaneado. Examine visualmente todas as páginas e leia os textos impressos nas imagens, incluindo cabeçalhos, números, datas, partes, prazos e autos de infração. Não responda que o PDF não possui texto: use a informação visual das páginas.`,
@@ -119,7 +135,7 @@ export async function analisarPdfComIA(
             type: "text",
             text: `Data de hoje: ${new Date().toISOString().slice(0, 10)}
 
-Leia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, objeto da causa, valor da causa, datas e prazos. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.
+          Leia visualmente todas as páginas deste PDF escaneado. Extraia os dados identificáveis mesmo que estejam em imagens. Para este documento, dê prioridade a número do processo, partes, órgão/vara, tipo de procedimento, objeto da causa, valor da causa, seção DOS PEDIDOS e bloco DAS VERBAS. Capture pedidos com e sem valores, inclusive os itens que continuam nas páginas seguintes. Retorne somente o JSON solicitado; não use null para todos os campos se houver texto legível.
 
 Transcrição auxiliar produzida por OCR. Use-a para conferir números e nomes, mas sempre valide contra a imagem do PDF:
 ${textoOcr.slice(0, 50000)}`,

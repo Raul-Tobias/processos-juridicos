@@ -1,12 +1,6 @@
 import postgres from "postgres";
-import type { BloqueioJudicial } from "@/lib/analisarComIA";
-
-export type Pedido = {
-  descricao: string;
-  valor: number;
-  tipo: "fechado" | "minimo" | "a_apurar";
-  destaque: boolean;
-};
+import type { BloqueioJudicial, Pedido } from "@/lib/analisarComIA";
+export type { Pedido } from "@/lib/analisarComIA";
 
 export const sql = postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/autos", {
   prepare: false,
@@ -86,6 +80,7 @@ export async function inicializarBanco() {
       tipo_acao TEXT,
       valor_causa TEXT,
       objeto_causa TEXT,
+          pedidos JSONB,
       status TEXT NOT NULL DEFAULT 'em_andamento',
       prazo_vencimento TEXT,
       andamento_atual TEXT,
@@ -97,6 +92,7 @@ export async function inicializarBanco() {
     )
   `;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS objeto_causa TEXT`;
+  await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS pedidos JSONB`;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB`;
   await sql`
     CREATE TABLE IF NOT EXISTS usuarios (
@@ -136,6 +132,7 @@ export async function inserirProcesso(processo: Processo) {
       vara_comarca: processo.varaComarca,
       tipo_acao: processo.tipoAcao,
       valor_causa: processo.valorCausa,
+      pedidos: processo.pedidos?.length ? JSON.stringify(processo.pedidos) : null,
       status: processo.status,
       prazo_vencimento: processo.prazoVencimento,
       andamento_atual: processo.andamentoAtual,
@@ -159,6 +156,7 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
     tipoAcao: linha.tipo_acao as string | null,
     valorCausa: linha.valor_causa as string | null,
     objetoCausa: linha.objeto_causa as string | null,
+    pedidos: normalizarPedidos(linha.pedidos),
     status: String(linha.status),
     prazoVencimento: linha.prazo_vencimento as string | null,
     andamentoAtual: linha.andamento_atual as string | null,
@@ -168,6 +166,32 @@ function mapearProcesso(linha: Record<string, unknown>): Processo {
     nomeArquivo: linha.nome_arquivo as string | null,
     criadoEm: new Date(String(linha.criado_em)).toISOString(),
   };
+}
+
+function normalizarPedidos(valor: unknown): Pedido[] {
+  let bruto = valor;
+  if (typeof bruto === "string") {
+    try {
+      bruto = JSON.parse(bruto);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(bruto)) return [];
+  return bruto.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const pedido = item as Record<string, unknown>;
+    if (typeof pedido.descricao !== "string" || !pedido.descricao.trim()) return [];
+    const tipo = ["fechado", "minimo", "a_apurar"].includes(String(pedido.tipo))
+      ? (pedido.tipo as Pedido["tipo"])
+      : "a_apurar";
+    return [{
+      descricao: pedido.descricao.trim(),
+      valor: typeof pedido.valor === "number" && Number.isFinite(pedido.valor) ? pedido.valor : 0,
+      tipo,
+      destaque: pedido.destaque === true,
+    }];
+  });
 }
 
 export async function listarProcessos() {
