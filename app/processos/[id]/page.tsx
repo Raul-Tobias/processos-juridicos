@@ -12,6 +12,8 @@ import {
   Trash2,
   ArchiveRestore,
   CircleAlert,
+  FileText,
+  Eye,
 } from "lucide-react";
 
 const CAMPOS: {
@@ -164,144 +166,131 @@ export default function DetalheProcesso() {
     }
   }
 
+  const camposDados = CAMPOS.filter(({ chave }) => chave !== "numeroProcesso");
+  const bloqueioIdentificado = processo.bloqueioJudicial?.identificado === "sim";
+
   return (
-    <div className="max-w-3xl mx-auto px-5 sm:px-6 pt-9 sm:pt-10 pb-24">
-      <Link
-        href="/processos"
-        className="inline-flex items-center gap-1.5 text-sm text-ink/50 hover:text-ink transition-colors mb-6"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Processos
-      </Link>
+    <div className="max-w-[1200px] mx-auto px-5 sm:px-8 lg:px-10 pt-8 sm:pt-10 pb-24">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[11px] font-medium text-ink/45 mb-7">
+        <Link href="/processos" className="inline-flex items-center gap-1 hover:text-accent transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Processos
+        </Link>
+        <span aria-hidden="true" className="text-ink/25">/</span>
+        <span>Detalhes</span>
+      </nav>
 
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <h1 className="font-serif text-2xl sm:text-4xl font-semibold leading-tight tracking-[-0.02em]">
-          {processo.partes ?? processo.nomeArquivo}
-        </h1>
-        <div className="shrink-0 mt-1">
-          <StatusBadge status={processo.status} />
+      <header className="border-b border-[#dedad0] pb-8 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <h1 className="max-w-4xl font-serif text-[28px] sm:text-[38px] font-semibold leading-[1.13] tracking-[-0.02em] text-ink">
+            {processo.partes ?? processo.nomeArquivo}
+          </h1>
+          <div className="shrink-0 sm:pt-1"><StatusBadge status={processo.status} /></div>
         </div>
-      </div>
-      <p className="font-mono text-sm text-ink/50 mb-10">
-        {processo.numeroProcesso ?? "Número não identificado"}
-      </p>
-
-      {processo.resumo && (
-        <p className="text-ink/80 leading-relaxed mb-10 border-l-2 border-accent/40 pl-4">
-          {processo.resumo}
+        <p className="mt-3 font-mono text-xs text-ink/50">
+          {processo.numeroProcesso ?? "Número não identificado"}
         </p>
-      )}
+      </header>
 
-      {editando ? (
-        <div className="border border-ink/10 bg-paper/70 rounded-2xl divide-y divide-ink/10 overflow-hidden shadow-[0_12px_30px_#1c243108]">
-          {CAMPOS.map(({ chave, label }) => (
-            <label
-              key={chave}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 px-5 py-3.5"
-            >
-              <span className="font-mono text-[11px] uppercase tracking-wide text-ink/40 sm:pt-2">
-                {label}
-              </span>
-              <input
-                value={formulario[chave] ?? ""}
-                onChange={(e) =>
-                  setFormulario({ ...formulario, [chave]: e.target.value })
-                }
-                type={chave === "prazoVencimento" ? "date" : "text"}
-                className="sm:col-span-2 rounded-lg border border-ink/15 bg-white/40 px-3 py-2 text-sm outline-none focus:border-accent/50"
-              />
-            </label>
-          ))}
-          <label className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 px-5 py-3.5">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-ink/40 sm:pt-2">
-              Observações
-            </span>
-            <textarea
-              value={formulario.observacoes ?? ""}
-              onChange={(e) =>
-                setFormulario({ ...formulario, observacoes: e.target.value })
-              }
-              rows={4}
-              className="sm:col-span-2 rounded-lg border border-ink/15 bg-white/40 px-3 py-2 text-sm outline-none focus:border-accent/50 resize-y"
-              placeholder="Anotações internas sobre este processo"
-            />
-          </label>
-        </div>
-      ) : (
-        <dl className="border border-ink/10 bg-paper/70 rounded-2xl divide-y divide-ink/10 overflow-hidden shadow-[0_12px_30px_#1c243108]">
-          {CAMPOS.map(({ chave, label }) => (
-          <div
-            key={chave}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 px-5 py-3.5"
-          >
-            <dt className="font-mono text-[11px] uppercase tracking-wide text-ink/40 sm:pt-0.5">
-              {label}
-            </dt>
-            <dd className="sm:col-span-2 text-ink/85">
-              {processo[chave] ?? (
-                <span className="text-ink/30">Não identificado</span>
-              )}
-            </dd>
-          </div>
-          ))}
-        </dl>
-      )}
+      <section aria-label="Resumo do processo" className="grid grid-cols-1 min-[540px]:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <ResumoItem label="Status"><StatusBadge status={processo.status} /></ResumoItem>
+        <ResumoItem label="Próximo prazo" value={processo.prazoVencimento} />
+        <ResumoItem label="Tipo de ação" value={processo.tipoAcao} />
+        <ResumoItem label="Valor da causa" value={processo.valorCausa} />
+      </section>
 
-      {processo.bloqueioJudicial && (
-        <section className="mt-6 border border-accent/20 bg-accent/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-accent/15">
-            <h2 className="font-serif text-xl font-semibold">Bloqueio judicial</h2>
-            <p className="text-sm text-ink/55 mt-1">
-              Informações identificadas no documento enviado
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7">
+        <div className="lg:col-span-8 space-y-6">
+          <section className="border border-[#e3ded6] rounded-lg bg-white shadow-[0_5px_20px_#5f473008] px-5 sm:px-7 py-6">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent mb-3">Resumo da fiscalização</p>
+            <p className="border-l-2 border-accent/55 pl-4 sm:pl-5 max-w-3xl text-[15px] leading-7 text-ink/80 whitespace-pre-wrap">
+              {processo.resumo ?? <span className="text-ink/35">Não identificado</span>}
             </p>
-          </div>
-          <dl className="divide-y divide-accent/10">
-            <LinhaBloqueio label="Identificado">
-              {rotuloIdentificacao(processo.bloqueioJudicial.identificado)}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Valor bloqueado">
-              {processo.bloqueioJudicial.valor}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Data do bloqueio">
-              {processo.bloqueioJudicial.data}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Contas / instituições">
-              {processo.bloqueioJudicial.contas.length > 0
-                ? processo.bloqueioJudicial.contas.join("; ")
-                : null}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Pedido de desbloqueio">
-              {rotuloIdentificacao(
-                processo.bloqueioJudicial.manifestacaoDesbloqueio.identificada
-              )}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Detalhes da manifestação">
-              {processo.bloqueioJudicial.manifestacaoDesbloqueio.detalhes}
-            </LinhaBloqueio>
-            <LinhaBloqueio label="Data da manifestação">
-              {processo.bloqueioJudicial.manifestacaoDesbloqueio.data}
-            </LinhaBloqueio>
-          </dl>
-        </section>
-      )}
+          </section>
 
-      {!editando && processo.observacoes && (
-        <div className="mt-5 rounded-2xl border border-gold/20 bg-gold/5 px-5 py-4">
-          <p className="font-mono text-[11px] uppercase tracking-wide text-gold mb-2">
-            Observações
-          </p>
-          <p className="text-sm text-ink/75 whitespace-pre-wrap">{processo.observacoes}</p>
+          <section className="border border-[#e3ded6] rounded-lg bg-white shadow-[0_5px_20px_#5f473008] overflow-hidden">
+            <div className="px-5 sm:px-7 py-5 border-b border-[#eee9e4]">
+              <h2 className="font-serif text-[22px] font-semibold text-ink">Dados do processo</h2>
+            </div>
+            {editando ? (
+              <div className="divide-y divide-[#eee9e4]">
+                {CAMPOS.map(({ chave, label }) => (
+                  <label key={chave} className="grid grid-cols-1 sm:grid-cols-[150px_1fr] gap-2 sm:gap-5 px-5 sm:px-7 py-4">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45 sm:pt-2.5">{label}</span>
+                    <input value={formulario[chave] ?? ""} onChange={(e) => setFormulario({ ...formulario, [chave]: e.target.value })} type={chave === "prazoVencimento" ? "date" : "text"} className="rounded-md border border-[#dcd5cd] bg-[#fdfcfa] px-3 py-2 text-sm text-ink outline-none focus:border-accent/50" />
+                  </label>
+                ))}
+                <label className="grid grid-cols-1 sm:grid-cols-[150px_1fr] gap-2 sm:gap-5 px-5 sm:px-7 py-4">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45 sm:pt-2.5">Observações</span>
+                  <textarea value={formulario.observacoes ?? ""} onChange={(e) => setFormulario({ ...formulario, observacoes: e.target.value })} rows={4} className="rounded-md border border-[#dcd5cd] bg-[#fdfcfa] px-3 py-2 text-sm text-ink outline-none focus:border-accent/50 resize-y" placeholder="Anotações internas sobre este processo" />
+                </label>
+              </div>
+            ) : (
+              <dl className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#eee9e4]">
+                {camposDados.map(({ chave, label }, index) => (
+                  <div key={chave} className={`px-5 sm:px-7 py-5 ${index > 1 ? "sm:border-t border-[#eee9e4]" : ""}`}>
+                    <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45 mb-2">{label}</dt>
+                    <dd className="text-[15px] leading-6 font-medium text-ink/85">{processo[chave] ?? <span className="font-normal text-ink/35">Não identificado</span>}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </section>
+
+          {!editando && processo.observacoes && (
+            <section className="border border-[#ddd2bd] rounded-lg bg-[#fcfaf5] px-5 sm:px-7 py-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#896d32] mb-2">Observações</p>
+              <p className="text-sm leading-6 text-ink/75 whitespace-pre-wrap">{processo.observacoes}</p>
+            </section>
+          )}
         </div>
-      )}
 
-      {mensagem && <p className="mt-4 text-sm text-ink/60">{mensagem}</p>}
+        <aside className="lg:col-span-4 space-y-6">
+          <section className="border border-[#d9cbbd] border-t-[3px] border-t-[#a4823f] rounded-lg bg-[#fffdf9] overflow-hidden shadow-[0_5px_20px_#5f473008]">
+            <div className="px-5 py-5 border-b border-[#ebe3d9]">
+              <h2 className="font-serif text-[21px] font-semibold">Bloqueio judicial</h2>
+              <p className="text-xs leading-5 text-ink/55 mt-1">Informações identificadas no documento enviado</p>
+            </div>
+            {bloqueioIdentificado ? (
+              <dl className="divide-y divide-[#eee8df]">
+                <LinhaBloqueio label="Identificado">{rotuloIdentificacao(processo.bloqueioJudicial?.identificado ?? "nao_identificado")}</LinhaBloqueio>
+                <LinhaBloqueio label="Valor bloqueado">{processo.bloqueioJudicial?.valor}</LinhaBloqueio>
+                <LinhaBloqueio label="Data do bloqueio">{processo.bloqueioJudicial?.data}</LinhaBloqueio>
+                <LinhaBloqueio label="Contas / instituições">{processo.bloqueioJudicial?.contas.length ? processo.bloqueioJudicial.contas.join("; ") : null}</LinhaBloqueio>
+                <LinhaBloqueio label="Pedido de desbloqueio">{rotuloIdentificacao(processo.bloqueioJudicial?.manifestacaoDesbloqueio.identificada ?? "nao_identificado")}</LinhaBloqueio>
+                <LinhaBloqueio label="Detalhes da manifestação">{processo.bloqueioJudicial?.manifestacaoDesbloqueio.detalhes}</LinhaBloqueio>
+                <LinhaBloqueio label="Data da manifestação">{processo.bloqueioJudicial?.manifestacaoDesbloqueio.data}</LinhaBloqueio>
+              </dl>
+            ) : (
+              <div className="px-5 py-6">
+                <p className="text-sm font-medium text-ink/75">Não há bloqueio judicial identificado</p>
+                <p className="text-xs leading-5 text-ink/45 mt-1">A análise do documento não apontou medidas de bloqueio.</p>
+              </div>
+            )}
+          </section>
 
-      <p className="font-mono text-xs text-ink/35 mt-6">
-        Arquivo original: {processo.nomeArquivo} · analisado em{" "}
-        {new Date(processo.criadoEm).toLocaleString("pt-BR")}
-      </p>
+          <section className="border border-[#e3ded6] rounded-lg bg-white px-5 py-5 shadow-[0_5px_20px_#5f473008]">
+            <h2 className="font-serif text-[21px] font-semibold mb-4">Documento original</h2>
+            <div className="flex gap-3">
+              <span className="grid place-items-center shrink-0 w-9 h-10 rounded-md border border-[#ded8cf] bg-[#faf8f4] text-accent"><FileText className="w-4 h-4" /></span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink/85 break-words">{processo.nomeArquivo ?? "Não identificado"}</p>
+                <p className="mt-1 text-[11px] leading-4 text-ink/45">Analisado em {new Date(processo.criadoEm).toLocaleString("pt-BR")}</p>
+              </div>
+            </div>
+            <button disabled title="O arquivo original não está disponível para visualização" className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-md border border-[#d8d1c9] px-3 py-2.5 text-xs font-semibold text-ink/35 cursor-not-allowed">
+              <Eye className="w-3.5 h-3.5" />
+              Visualizar documento
+            </button>
+          </section>
+        </aside>
+      </div>
 
-      <div className="flex items-center gap-3 mt-10 pt-6 border-t border-ink/10">
+      {mensagem && <p className="mt-5 text-sm text-ink/60">{mensagem}</p>}
+
+      <section className="mt-10 pt-6 border-t border-[#dedad0]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45 mb-3">Ações</p>
+        <div className="flex flex-wrap items-center gap-3">
         {editando ? (
           <>
             <button
@@ -338,14 +327,13 @@ export default function DetalheProcesso() {
               setMensagem(null);
               setEditando(true);
             }}
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-ink/15 hover:bg-ink/5 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md bg-accent text-paper hover:bg-accent-light transition-colors"
           >
             Editar dados
           </button>
         )}
 
-        {!editando && (
-          <>
+        {!editando && <>
         <button
           onClick={alternarUrgencia}
           disabled={processando || processo.status === "arquivado"}
@@ -392,7 +380,7 @@ export default function DetalheProcesso() {
               disabled={processando}
               className="text-sm font-medium px-3 py-2 rounded-lg bg-accent text-paper hover:bg-accent-light transition-colors disabled:opacity-40"
             >
-              Sim, deletar
+              Sim, excluir
             </button>
             <button
               onClick={() => setConfirmandoExclusao(false)}
@@ -405,17 +393,23 @@ export default function DetalheProcesso() {
           <button
             onClick={() => setConfirmandoExclusao(true)}
             disabled={processando}
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border border-accent/25 text-accent hover:bg-accent/5 transition-colors disabled:opacity-40"
+            className="sm:ml-auto inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md border border-accent/25 text-accent hover:bg-accent/5 transition-colors disabled:opacity-40"
           >
             <Trash2 className="w-4 h-4" />
-            Deletar
+            Excluir
           </button>
-        )}
-          </>
-        )}
-      </div>
+        )}</>}
+        </div>
+      </section>
     </div>
   );
+}
+
+function ResumoItem({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) {
+  return <div className="min-h-[88px] border border-[#e3ded6] rounded-lg bg-white px-4 py-3.5 shadow-[0_3px_14px_#5f473006]">
+    <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink/45 mb-2">{label}</p>
+    {children ?? <p className={`text-[13px] leading-5 font-medium ${value ? "text-ink/80" : "text-ink/35 font-normal"}`}>{value ?? "Não identificado"}</p>}
+  </div>;
 }
 
 function rotuloIdentificacao(valor: BloqueioJudicial["identificado"]) {
@@ -430,11 +424,11 @@ function LinhaBloqueio({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 px-5 py-3.5">
-      <dt className="font-mono text-[11px] uppercase tracking-wide text-ink/45">
+    <div className="px-5 py-3.5">
+      <dt className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink/45 mb-1">
         {label}
       </dt>
-      <dd className="sm:col-span-2 text-ink/85">
+      <dd className="text-sm leading-5 text-ink/80">
         {children || <span className="text-ink/30">Não identificado</span>}
       </dd>
     </div>
