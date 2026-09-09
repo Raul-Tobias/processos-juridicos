@@ -9,6 +9,8 @@ export const sql = postgres(process.env.DATABASE_URL ?? "postgres://localhost:54
 
 export interface Processo {
   id: string;
+  responsavelId: string | null;
+  responsavelNome: string | null;
   numeroProcesso: string | null;
   partes: string | null;
   varaComarca: string | null;
@@ -88,12 +90,14 @@ export async function inicializarBanco() {
       observacoes TEXT,
       bloqueio_judicial JSONB,
       nome_arquivo TEXT,
+      responsavel_id TEXT,
       criado_em TIMESTAMPTZ NOT NULL
     )
   `;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS objeto_causa TEXT`;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS pedidos JSONB`;
   await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS bloqueio_judicial JSONB`;
+  await sql`ALTER TABLE processos ADD COLUMN IF NOT EXISTS responsavel_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL`;
   await sql`
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY,
@@ -127,6 +131,7 @@ export async function inserirProcesso(processo: Processo) {
   await sql`
     INSERT INTO processos ${sql({
       id: processo.id,
+      responsavel_id: processo.responsavelId,
       numero_processo: processo.numeroProcesso,
       partes: processo.partes,
       vara_comarca: processo.varaComarca,
@@ -150,6 +155,8 @@ export async function inserirProcesso(processo: Processo) {
 function mapearProcesso(linha: Record<string, unknown>): Processo {
   return {
     id: String(linha.id),
+    responsavelId: linha.responsavel_id as string | null,
+    responsavelNome: linha.responsavel_nome as string | null,
     numeroProcesso: linha.numero_processo as string | null,
     partes: linha.partes as string | null,
     varaComarca: linha.vara_comarca as string | null,
@@ -194,15 +201,19 @@ function normalizarPedidos(valor: unknown): Pedido[] {
   });
 }
 
-export async function listarProcessos() {
+export async function listarProcessos(responsavelId?: string) {
   await garantirBanco();
-  const linhas = await sql`SELECT * FROM processos ORDER BY criado_em DESC`;
+  const linhas = responsavelId
+    ? await sql`SELECT p.*, u.nome AS responsavel_nome FROM processos p LEFT JOIN usuarios u ON u.id = p.responsavel_id WHERE p.responsavel_id = ${responsavelId} ORDER BY p.criado_em DESC`
+    : await sql`SELECT p.*, u.nome AS responsavel_nome FROM processos p LEFT JOIN usuarios u ON u.id = p.responsavel_id ORDER BY p.criado_em DESC`;
   return linhas.map((linha) => mapearProcesso(linha));
 }
 
-export async function buscarProcessoPorId(id: string) {
+export async function buscarProcessoPorId(id: string, responsavelId?: string) {
   await garantirBanco();
-  const [linha] = await sql`SELECT * FROM processos WHERE id = ${id}`;
+  const [linha] = responsavelId
+    ? await sql`SELECT p.*, u.nome AS responsavel_nome FROM processos p LEFT JOIN usuarios u ON u.id = p.responsavel_id WHERE p.id = ${id} AND p.responsavel_id = ${responsavelId}`
+    : await sql`SELECT p.*, u.nome AS responsavel_nome FROM processos p LEFT JOIN usuarios u ON u.id = p.responsavel_id WHERE p.id = ${id}`;
   return linha ? mapearProcesso(linha) : undefined;
 }
 

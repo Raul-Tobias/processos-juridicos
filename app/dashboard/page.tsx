@@ -33,16 +33,19 @@ export default function Dashboard() {
   const [filtroPeriodo, setFiltroPeriodo] = useState("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [busca, setBusca] = useState("");
+  const [ehAdmin, setEhAdmin] = useState(false);
 
   useEffect(() => {
-    fetch("/api/processos")
-      .then(async (r) => {
-        if (r.status === 401) {
+    Promise.all([fetch("/api/processos"), fetch("/api/auth/me")])
+      .then(async ([respostaProcessos, respostaSessao]) => {
+        if (respostaProcessos.status === 401 || respostaSessao.status === 401) {
           router.replace("/login");
           return null;
         }
-        if (!r.ok) throw new Error();
-        return r.json();
+        if (!respostaProcessos.ok || !respostaSessao.ok) throw new Error();
+        const [dados, sessao] = await Promise.all([respostaProcessos.json(), respostaSessao.json()]);
+        setEhAdmin(sessao.podeAdministrar === true);
+        return dados;
       })
       .then((dados) => {
         if (!Array.isArray(dados)) return;
@@ -51,6 +54,18 @@ export default function Dashboard() {
       })
       .catch(() => setCarregando(false));
   }, [router]);
+
+  const analisesPorResponsavel = useMemo(() => {
+    const total = processosFiltrados.length;
+    const contagens = new Map<string, number>();
+    processosFiltrados.forEach((processo) => {
+      const nome = processo.responsavelNome ?? "Não informado";
+      contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
+    });
+    return [...contagens.entries()]
+      .map(([nome, quantidade]) => ({ nome, quantidade, percentual: total ? (quantidade / total) * 100 : 0 }))
+      .sort((primeiro, segundo) => segundo.quantidade - primeiro.quantidade || primeiro.nome.localeCompare(segundo.nome, "pt-BR"));
+  }, [processosFiltrados]);
 
   const processosFiltrados = useMemo(
     () => processos.filter((p) => {
@@ -289,6 +304,23 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {ehAdmin && (
+        <section className="mb-4 rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-4">
+          <div className="flex items-baseline justify-between gap-3 border-b border-[#dedad0] pb-3">
+            <h2 className="text-[10px] font-bold uppercase tracking-wide">Análises por responsável</h2>
+            <span className="text-[10px] text-ink/55">{processosFiltrados.length} análises no total</span>
+          </div>
+          <div className="mt-3 divide-y divide-[#e6e1d7]">
+            {analisesPorResponsavel.map((responsavel) => (
+              <div key={responsavel.nome} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-2.5 text-xs">
+                <span className="font-medium truncate">{responsavel.nome}</span>
+                <span className="whitespace-nowrap text-ink/65">{responsavel.quantidade} ({responsavel.percentual.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-3 sm:p-4">
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="text-[10px] font-bold uppercase tracking-wide">
@@ -330,7 +362,7 @@ export default function Dashboard() {
               <td className={`px-4 py-4 text-[10px] font-semibold ${p.prazoVencimento && diasAteVencimento(p.prazoVencimento)! < 0 ? "text-accent" : "text-ink/40"}`}>
                 {p.prazoVencimento ?? "-"}
               </td>
-              <td className="px-4 py-4 text-[11px] text-ink/40">-</td>
+              <td className="px-4 py-4 text-[11px] text-ink/55">{p.responsavelNome ?? "Não informado"}</td>
               <td className="px-4 py-4 text-[10px] text-ink/40">{new Date(p.criadoEm).toLocaleDateString("pt-BR")}</td>
               <td className="px-4 sm:px-5 py-4"><Link href={`/processos/${p.id}`} className="inline-flex items-center gap-2 rounded-md border border-[#dedad0] px-2.5 py-1 text-[10px] font-semibold hover:border-accent hover:text-accent">Ver</Link><MoreVertical className="inline-block ml-2 w-4 h-4 text-ink/50 align-middle" /></td>
             </tr>

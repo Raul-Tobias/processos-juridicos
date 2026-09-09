@@ -46,7 +46,7 @@ function ProcessoLinha({ processo }: { processo: Processo }) {
     <div className="process-type">{renderTipoIcone(processo.tipoAcao)}<span>{processo.tipoAcao ?? "Não identificado"}</span></div>
     <div><StatusBadge status={vencido ? "vencido" : processo.status} /></div>
     <div className={`process-deadline ${vencido ? "is-overdue" : ""}`}>{processo.prazoVencimento ? <><span><CalendarDays aria-hidden="true" />{formatarData(processo.prazoVencimento)}</span><small>{vencido ? `${Math.abs(dias ?? 0)} dias atrasado` : dias === 0 ? "vence hoje" : `em ${dias} dias`}</small></> : "—"}</div>
-    <div className="process-responsible">—</div>
+    <div className="process-responsible">{processo.responsavelNome ?? "Não informado"}</div>
     <div className="process-updated"><span><Clock3 aria-hidden="true" />{formatarData(processo.criadoEm)}</span><small>{new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(atualizado)}</small></div>
     <div className="process-actions"><Link href={`/processos/${processo.id}`}>Ver</Link><button type="button" aria-label={`Mais ações para ${processo.numeroProcesso ?? "este processo"}`}><Ellipsis aria-hidden="true" /></button></div>
   </div>;

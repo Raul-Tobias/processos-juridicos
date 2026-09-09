@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
 
     await inserirProcesso({
       id,
+      responsavelId: usuario.id,
+      responsavelNome: usuario.nome,
       numeroProcesso: analiseFinal.numeroProcesso,
       partes: analiseFinal.partes,
       varaComarca: analiseFinal.varaComarca,
