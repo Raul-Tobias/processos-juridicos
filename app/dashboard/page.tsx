@@ -55,18 +55,6 @@ export default function Dashboard() {
       .catch(() => setCarregando(false));
   }, [router]);
 
-  const analisesPorResponsavel = useMemo(() => {
-    const total = processosFiltrados.length;
-    const contagens = new Map<string, number>();
-    processosFiltrados.forEach((processo) => {
-      const nome = processo.responsavelNome ?? "Não informado";
-      contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
-    });
-    return [...contagens.entries()]
-      .map(([nome, quantidade]) => ({ nome, quantidade, percentual: total ? (quantidade / total) * 100 : 0 }))
-      .sort((primeiro, segundo) => segundo.quantidade - primeiro.quantidade || primeiro.nome.localeCompare(segundo.nome, "pt-BR"));
-  }, [processosFiltrados]);
-
   const processosFiltrados = useMemo(
     () => processos.filter((p) => {
       const texto = [p.numeroProcesso, p.partes, p.tipoAcao, p.varaComarca].filter(Boolean).join(" ").toLocaleLowerCase();
@@ -83,6 +71,18 @@ export default function Dashboard() {
     }),
     [busca, filtroBloqueio, filtroPeriodo, filtroStatus, filtroTipo, processos]
   );
+
+  const analisesPorResponsavel = useMemo(() => {
+    const total = processosFiltrados.length;
+    const contagens = new Map<string, number>();
+    processosFiltrados.forEach((processo) => {
+      const nome = processo.responsavelNome ?? "Não informado";
+      contagens.set(nome, (contagens.get(nome) ?? 0) + 1);
+    });
+    return [...contagens.entries()]
+      .map(([nome, quantidade]) => ({ nome, quantidade, percentual: total ? (quantidade / total) * 100 : 0 }))
+      .sort((primeiro, segundo) => segundo.quantidade - primeiro.quantidade || primeiro.nome.localeCompare(segundo.nome, "pt-BR"));
+  }, [processosFiltrados]);
 
   const tiposDisponiveis = useMemo(
     () => Array.from(new Set(processos.map((p) => p.tipoAcao).filter((tipo): tipo is string => Boolean(tipo)))),
