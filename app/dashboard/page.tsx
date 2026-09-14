@@ -242,19 +242,19 @@ export default function Dashboard() {
           <AlertTriangle className="w-5 h-5 text-accent mb-2" />
           <p className="font-serif text-3xl font-semibold leading-none text-accent">{prazosVencidos}</p>
           <p className="text-xs font-semibold mt-1.5">Prazos vencidos</p><p className="text-[10px] text-ink/55 mt-1">Requer atenção imediata</p>
-          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-accent">Ver processos <ArrowRight className="w-3 h-3" /></Link>
+          <Link href="/processos?filtro=vencidos" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-accent hover:underline">Ver processos <ArrowRight className="w-3 h-3" /></Link>
         </div>
         <div className="min-h-[124px] rounded-xl border border-gold/45 bg-[#fbfaf6] px-4 py-4">
           <Clock3 className="w-5 h-5 text-gold mb-2" />
           <p className="font-serif text-3xl font-semibold leading-none text-gold">{prazosProximos}</p>
           <p className="text-xs font-semibold mt-1.5">Prazos próximos (7 dias)</p><p className="text-[10px] text-ink/55 mt-1">Acompanhe os próximos prazos</p>
-          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-gold">Ver prazos <ArrowRight className="w-3 h-3" /></Link>
+          <Link href="/processos?filtro=proximos" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-gold hover:underline">Ver prazos <ArrowRight className="w-3 h-3" /></Link>
         </div>
         <div className="min-h-[124px] rounded-xl border border-[#d77b55]/50 bg-[#fbfaf6] px-4 py-4">
           <AlertTriangle className="w-5 h-5 text-[#b94c26] mb-2" />
           <p className="font-serif text-3xl font-semibold leading-none text-[#b94c26]">{atencao.length}</p>
           <p className="text-xs font-semibold mt-1.5">Exigem atenção</p><p className="text-[10px] text-ink/55 mt-1">Processos que precisam de acompanhamento</p>
-          <Link href="/dashboard" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-[#b94c26]">Ver processos <ArrowRight className="w-3 h-3" /></Link>
+          <Link href="/processos?filtro=atencao" className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-[#b94c26] hover:underline">Ver processos <ArrowRight className="w-3 h-3" /></Link>
         </div>
       </div>
       </section>
@@ -297,8 +297,8 @@ export default function Dashboard() {
         <div className="rounded-xl border border-[#dedad0] bg-[#fbfaf6] p-3">
           <h2 className="px-1 text-[10px] font-bold uppercase tracking-wide">Atenção necessária</h2>
           <div className="mt-3 space-y-2">
-            <Link href="/dashboard" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-accent">{prazosVencidos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo vencido</p><p className="text-[9px] text-ink/55 mt-0.5">Requer atenção imediata</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-accent">Ver processos <ArrowRight className="w-3 h-3" /></span></Link>
-            <Link href="/dashboard" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-gold">{prazosProximos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo nos próximos 7 dias</p><p className="text-[9px] text-ink/55 mt-0.5">Acompanhe os próximos prazos</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-gold">Ver prazos <ArrowRight className="w-3 h-3" /></span></Link>
+            <Link href="/processos?filtro=vencidos" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-accent">{prazosVencidos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo vencido</p><p className="text-[9px] text-ink/55 mt-0.5">Requer atenção imediata</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-accent">Ver processos <ArrowRight className="w-3 h-3" /></span></Link>
+            <Link href="/processos?filtro=proximos" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-gold">{prazosProximos}</p><p className="text-[10px] font-semibold mt-1">Processos com prazo nos próximos 7 dias</p><p className="text-[9px] text-ink/55 mt-0.5">Acompanhe os próximos prazos</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-gold">Ver prazos <ArrowRight className="w-3 h-3" /></span></Link>
             <Link href="/processos?filtro=urgente" className="block rounded-lg border border-[#e6e1d7] bg-paper px-3 py-2.5 hover:bg-white transition-colors"><p className="font-serif text-xl leading-none text-[#182538]">{processosFiltrados.filter((p) => p.status === "urgente").length}</p><p className="text-[10px] font-semibold mt-1">Processos urgentes</p><p className="text-[9px] text-ink/55 mt-0.5">Requerem prioridade máxima</p><span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-semibold text-[#182538]">Ver processos <ArrowRight className="w-3 h-3" /></span></Link>
           </div>
         </div>

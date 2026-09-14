@@ -8,15 +8,39 @@ import { Processo } from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 
 const FILTROS = [
-  { valor: "todos", label: "Todos" }, { valor: "urgente", label: "Urgentes" },
-  { valor: "em_andamento", label: "Em andamento" }, { valor: "aguardando", label: "Aguardando" },
-  { valor: "arquivado", label: "Arquivados" }, { valor: "bloqueio", label: "Bloqueio judicial" },
+  { valor: "todos", label: "Todos" },
+  { valor: "vencidos", label: "Prazos vencidos" },
+  { valor: "proximos", label: "Próximos (7 dias)" },
+  { valor: "atencao", label: "Exigem atenção" },
+  { valor: "urgente", label: "Urgentes" },
+  { valor: "em_andamento", label: "Em andamento" },
+  { valor: "aguardando", label: "Aguardando" },
+  { valor: "arquivado", label: "Arquivados" },
+  { valor: "bloqueio", label: "Bloqueio judicial" },
 ];
 
 function diasAteVencimento(dataISO: string | null) {
   if (!dataISO) return null;
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   return Math.round((new Date(dataISO).getTime() - hoje.getTime()) / 86400000);
+}
+
+function correspondeFiltro(p: Processo, filtro: string): boolean {
+  if (filtro === "todos") return true;
+  if (filtro === "bloqueio") return p.bloqueioJudicial?.identificado === "sim";
+
+  const dias = diasAteVencimento(p.prazoVencimento);
+  if (filtro === "vencidos") {
+    return p.status !== "arquivado" && dias !== null && dias < 0;
+  }
+  if (filtro === "proximos") {
+    return p.status !== "arquivado" && dias !== null && dias >= 0 && dias <= 7;
+  }
+  if (filtro === "atencao") {
+    return p.status !== "arquivado" && dias !== null && dias <= 7;
+  }
+
+  return p.status === filtro;
 }
 function formatarData(dataISO: string | null) { return dataISO ? new Intl.DateTimeFormat("pt-BR").format(new Date(dataISO)) : "—"; }
 function tipoIcone(tipo: string | null) {
@@ -58,9 +82,24 @@ function ListaProcessosConteudo() {
   const [busca, setBusca] = useState(""); const [ordenacao, setOrdenacao] = useState("recentes");
   const filtro = parametros.get("filtro") ?? "todos";
   useEffect(() => { fetch("/api/processos").then(async (r) => { if (r.status === 401) { router.replace("/login"); return null; } if (!r.ok) throw new Error(); return r.json(); }).then((dados) => { if (Array.isArray(dados)) setProcessos(dados); setCarregando(false); }).catch(() => setCarregando(false)); }, [router]);
-  const filtrados = useMemo(() => { const termo = busca.trim().toLocaleLowerCase(); return processos.filter((p) => { const status = filtro === "todos" ? true : filtro === "bloqueio" ? p.bloqueioJudicial?.identificado === "sim" : p.status === filtro; const texto = [p.numeroProcesso, p.partes, p.nomeArquivo, p.tipoAcao, p.varaComarca].filter(Boolean).join(" ").toLocaleLowerCase(); return status && (!termo || texto.includes(termo)); }).sort((a, b) => ordenacao === "prazo" ? (a.prazoVencimento ?? "9999-12-31").localeCompare(b.prazoVencimento ?? "9999-12-31") : ordenacao === "nome" ? (a.partes ?? a.nomeArquivo ?? "").localeCompare(b.partes ?? b.nomeArquivo ?? "", "pt-BR") : new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()); }, [busca, filtro, ordenacao, processos]);
+  const filtrados = useMemo(() => {
+    const termo = busca.trim().toLocaleLowerCase();
+    return processos
+      .filter((p) => {
+        const atendeFiltro = correspondeFiltro(p, filtro);
+        const texto = [p.numeroProcesso, p.partes, p.nomeArquivo, p.tipoAcao, p.varaComarca].filter(Boolean).join(" ").toLocaleLowerCase();
+        return atendeFiltro && (!termo || texto.includes(termo));
+      })
+      .sort((a, b) =>
+        ordenacao === "prazo"
+          ? (a.prazoVencimento ?? "9999-12-31").localeCompare(b.prazoVencimento ?? "9999-12-31")
+          : ordenacao === "nome"
+          ? (a.partes ?? a.nomeArquivo ?? "").localeCompare(b.partes ?? b.nomeArquivo ?? "", "pt-BR")
+          : new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+      );
+  }, [busca, filtro, ordenacao, processos]);
   function selecionarFiltro(valor: string) { router.push(valor === "todos" ? "/processos" : `/processos?filtro=${valor}`); }
-  const contar = (valor: string) => processos.filter((p) => valor === "todos" ? true : valor === "bloqueio" ? p.bloqueioJudicial?.identificado === "sim" : p.status === valor).length;
+  const contar = (valor: string) => processos.filter((p) => correspondeFiltro(p, valor)).length;
 
   return <div className="process-page">
     <header className="process-header"><div><p className="eyebrow">Acompanhamento</p><h1>Processos</h1><p className="result-count">{processos.length} {processos.length === 1 ? "processo encontrado" : "processos encontrados"}.</p></div><div className="header-actions"><div className="header-account"><button type="button" aria-label="Notificações" className="notification"><Bell aria-hidden="true" /><b>3</b></button><span className="account-avatar">A</span></div><Link href="/" className="new-process"><span>+</span> Novo processo</Link></div></header>
